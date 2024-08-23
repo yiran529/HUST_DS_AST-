@@ -71,15 +71,91 @@ TOKEN_KIND process_float(char* token_text, int index, FILE** fp_pointer) {
 }
 
 /**
+ * 判断一个字符表示的是否是十六进制的数（0~9， a~f，A~F）
+ * @param c 将要进行判断的字符
+ * @return 如果是十六进制的数，则返回true；否则返回false
+ */
+bool is_hexadecimal_num(char c) {
+    return c >= '0' && c <='9' || c >='a' && c <= 'f' || c >= 'A' && c <= 'F';
+}
+
+/**
+ * 判断一个字符表示的是否是八进制的数（0~7）
+ * @param c 将要进行判断的字符
+ * @return 如果是八进制的数，则返回true；否则返回false
+ */
+bool is_octal_num(char c) {
+    return c >= '0' && c <='7';
+}
+
+
+/**
  * 读取数字（不含符号）
  * @param token_text 存储数字字符串的数组(要求如果原来的数有负号，则需要它已经存储在token_text中)
  * @param index 从token_text的第几位开始存储数字（从0开始计）
+ * @param c 数字字符串的第一个表示数字的字符(该字符未被放入token_text中)
  * @param fp_pointer 输入文件当前的文件指针的地址
  * @return 数字常量对应的种类编码
  */
-TOKEN_KIND process_number(char* token_text, int index, FILE** fp_pointer) {
+TOKEN_KIND process_number(char* token_text, int index, char c, FILE** fp_pointer) {
+    FILE* fp = *fp_pointer;
 
+    if(c == '0') {
+        token_text[index++] = c;
+        c = fgetc(fp);
+        if(c == 'x') {
+            token_text[index++] = c;
+            do {
+                token_text[index++] = c;
+                c = fgetc(fp);
+            } while(is_hexadecimal_num(c));
+            if(c == 'l' || c == 'L') {// 处理整型常量后面有l或L后缀的情况
+                token_text[index] = '\0';
+                return LONG_CONST;
+            }
+        } else if(is_octal_num(c)) {
+            token_text[index++] = c;
+            do {
+                token_text[index++] = c;
+                c = fgetc(fp);
+            } while(is_octal_num(c));
+            if(c == 'l' || c == 'L') {// 处理整型常量后面有l或L后缀的情况
+                token_text[index] = '\0';
+                return LONG_CONST;
+            }
+        } else if(c != '.') {
+            ungetc(c, fp);
+            *fp_pointer = fp;
+            return ERROR_TOKEN;
+        }
+    }
+
+    do {
+        token_text[index++] = c;
+        c = fgetc(fp);
+    } while(is_num(c));
+
+    if(c == 'l' || c == 'L') {// 处理整型常量后面有l或L后缀的情况
+        token_text[index] = '\0';
+        return LONG_CONST;
+    }
+
+    if(c == '.') { // 处理浮点型常数
+        if(is_num(c = fgetc(fp))) {
+            ungetc(c, fp);
+            token_text[index++] = '.';
+            TOKEN_KIND float_kind = process_float(token_text, index, &fp);
+            *fp_pointer = fp;
+            return float_kind; 
+        } else return ERROR_TOKEN; // 需要考虑3.f类似的情况
+    }
+    ungetc(c, fp);
+    token_text[index] = '\0';
+    *fp_pointer = fp;
+    return INT_CONST;
 }
+
+
 /**
  * 处理非错误符号，变量的其它情况
  * @param c 读取到的第一个字符
@@ -121,13 +197,17 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                   }
                   // ungetc(c, fp); 既然出现错误，可能就没必要再管文件指针了
                   return ERROR_TOKEN; //在本项目中，'|'不可能单独出现
-        case '+': return PLUS; // 需不需要处理"++"时要报错的情况？还是丢给语法分析模块处理？
-        case '-': c = fgetc(fp);
-                  if(!is_num(c)) {
-                    ungetc(c, fp);
-                    return MINUS;
+        case '+': return PLUS;
+        case '-': {
+                    char c = fgetc(fp);
+                    if(!is_num(c)) {
+                        ungetc(c, fp);
+                        return MINUS;
+                    }
+                    TOKEN_KIND kind = process_number(token_text, 1, c, &fp);
+                    *fp_pointer = fp;
+                    return kind;
                   }
-
         case '*': return MULTIPLY;
         case '/': return DEVIDE;
         case '%': return MOD;
@@ -163,31 +243,9 @@ int get_token(FILE** fp_pointer) {
     }
 
     if(is_num(c)) {
-        do {
-            token_text[index++] = c;
-            c = fgetc(fp);
-        } while(is_num(c));
-
-        if(c == 'l' || c == 'L') {// 处理整型常量后面有l或L后缀的情况
-            token_text[index] = '\0';
-            return LONG;
-        }
-
-        if(c == '.') { // 处理浮点型常数
-            if(is_num(c = fgetc(fp))) {
-                ungetc(c, fp);
-                token_text[index++] = '.';
-                TOKEN_KIND float_kind = process_float(token_text, index, &fp);
-                *fp_pointer = fp;
-                return float_kind; 
-            } else return ERROR_TOKEN; // 需要考虑3.f类似的情况
-        }
-       //TODO;// 0x233 负数
-        ungetc(c, fp);
-        token_text[index] = '\0';
+        TOKEN_KIND kind = process_number(token_text, 0, c, &fp);
         *fp_pointer = fp;
-        return INT_CONST;
-        //TODO;//处理自身值
+        return kind;
     }
 
     token_text[0] = c;
@@ -197,14 +255,14 @@ int get_token(FILE** fp_pointer) {
     return kind;
 }
 
-// int main() {
-//     char path[1000];
-//     scanf("%s", path);
-//     FILE *fp = fopen(path, "r");
-//     int get_token_res;
-//     while((get_token_res = get_token(&fp)) != EOF) {
-//         printf("%d %s\n", get_token_res, token_text);
-//     }
-//     printf("%d", lines_num);
-//     return 0;
-// }
+int main() {
+    char path[1000];
+    scanf("%s", path);
+    FILE *fp = fopen(path, "r");
+    int get_token_res;
+    while((get_token_res = get_token(&fp)) != EOF) {
+        printf("%d %s\n", get_token_res, token_text);
+    }
+    printf("%d", lines_num);
+    return 0;
+}
