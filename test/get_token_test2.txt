@@ -1,0 +1,9 @@
+double a = 10.3;
+typedef struct{
+    int a;
+}T;
+char a = 10.0L;
+if(a + b > 102 && c || 1) {
+    a + b;
+}
+3.2323
