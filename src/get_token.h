@@ -1,5 +1,6 @@
 #include<stdio.h>
 #include <stdlib.h>
+bool is_num(char c);
 enum TOKEN_KIND{
     ERROR_TOKEN, 
     IDENT, 
@@ -12,18 +13,18 @@ enum TOKEN_KIND{
     STRUCT, 
     TYPEDEF,
     INT, 
+    SHORT,
     FLOAT, 
     DOUBLE, 
     CHAR, 
-    BOOL, 
     LONG, 
     IF, 
     ELSE, 
     EQ, 
     GREATER, 
     LESS, 
-    GREATEREQ,//大于等于
-    LESSEQ,//小于等于
+    GREATEREQ,// >=
+    LESSEQ,// <=
     ASSIGN, 
     SEMI, 
     COMMA, 
@@ -54,7 +55,7 @@ int lines_num;
 char token_text[300];
 
 /**
- * 读取*fp所给的源文件的下一格单词
+ * 读取*fp_pointer所指向的源文件的下一个单词
  * @param fp_pointer 指向源文件当前读取位置的双重指针
  * @return 识别出的单词的种类码
  */

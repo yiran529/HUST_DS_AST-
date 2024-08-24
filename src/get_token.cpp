@@ -28,10 +28,10 @@ bool is_letter(char c) {
  */
 TOKEN_KIND get_keyword(char* token_text) {
     if(!strcmp(token_text, "int")) return INT;
+    if(!strcmp(token_text, "short")) return SHORT;
     if(!strcmp(token_text, "char"))return CHAR;
     if(!strcmp(token_text, "float")) return FLOAT;
     if(!strcmp(token_text, "double")) return DOUBLE;
-    if(!strcmp(token_text, "bool")) return BOOL;
     if(!strcmp(token_text, "long")) return LONG;
     if(!strcmp(token_text, "if"))return IF;
     if(!strcmp(token_text, "else")) return ELSE;
@@ -62,9 +62,17 @@ TOKEN_KIND process_float(char* token_text, int index, FILE** fp_pointer) {
         token_text[index++] = c;
         c = fgetc(fp);
     } while(is_num(c));
+    if(c == 'l' || c == 'L') {
+        token_text[index++] = c;
+        token_text[index] = '\0';
+        return DOUBLE_CONST;
+    }
+    if(c == 'f' || c == 'F') {
+        token_text[index++] = c;
+        token_text[index] = '\0';
+        return FLOAT_CONST;
+    }
     token_text[index] = '\0';
-    if(c == 'l' || c == 'L') return DOUBLE_CONST;
-    if(c == 'f' || c == 'F') return FLOAT_CONST;
     ungetc(c, fp);
     *fp_pointer = fp;
     return FLOAT_CONST;
@@ -104,25 +112,31 @@ TOKEN_KIND process_number(char* token_text, int index, char c, FILE** fp_pointer
         token_text[index++] = c;
         c = fgetc(fp);
         if(c == 'x') {
-            token_text[index++] = c;
             do {
                 token_text[index++] = c;
                 c = fgetc(fp);
             } while(is_hexadecimal_num(c));
             if(c == 'l' || c == 'L') {// 处理整型常量后面有l或L后缀的情况
+                token_text[index++] = 'c';
                 token_text[index] = '\0';
                 return LONG_CONST;
             }
+            ungetc(c, fp);
+            token_text[index] = '\0';
+            return INT_CONST;
         } else if(is_octal_num(c)) {
-            token_text[index++] = c;
             do {
                 token_text[index++] = c;
                 c = fgetc(fp);
             } while(is_octal_num(c));
             if(c == 'l' || c == 'L') {// 处理整型常量后面有l或L后缀的情况
+                token_text[index++] = c;
                 token_text[index] = '\0';
                 return LONG_CONST;
             }
+            ungetc(c, fp);
+            token_text[index] = '\0';
+            return INT_CONST;
         } else if(c != '.') {
             ungetc(c, fp);
             *fp_pointer = fp;
@@ -136,6 +150,7 @@ TOKEN_KIND process_number(char* token_text, int index, char c, FILE** fp_pointer
     } while(is_num(c));
 
     if(c == 'l' || c == 'L') {// 处理整型常量后面有l或L后缀的情况
+        token_text[index++] = c;
         token_text[index] = '\0';
         return LONG_CONST;
     }
