@@ -1,4 +1,7 @@
+#ifndef SYNTAX_ANALYSIS_H
+#define SYSTAX_ANALYSIS_H
 #include "get_token.h"
+
 enum AST_NODE_TYPE {
     PROGRAM,
     EXT_DEF_SEQ,
@@ -19,19 +22,18 @@ enum AST_NODE_TYPE {
     ACTUAL_PARAM
 };
 
-typedef struct { // 采用孩子兄弟法存储多叉树
+typedef struct WORD_INFO{
+    int kind;
+    char* data;
+}WORD_INFO;
+typedef struct AST_NODE{ // 采用孩子兄弟法存储多叉树
     AST_NODE_TYPE type;
-    struct {
-        TOKEN_KIND kind;
-        char* data;
-    }word;
-    AST_NODE* next_sibling;
-    AST_NODE* first_child;
+    WORD_INFO word;
+    struct AST_NODE* next_sibling;
+    struct AST_NODE* first_child;
 }AST_NODE;
 
-AST_NODE* root;
 
-AST_NODE** AST;
 
-int cur_kind; // 当前读到的单词的种类编号
 
+#endif

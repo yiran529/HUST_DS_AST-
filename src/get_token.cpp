@@ -3,6 +3,10 @@
 #include<string.h>
 #include "get_token.h"
 
+int lines_num;
+
+char token_text[300];
+
 /**
  * 判断一个字符是不是表示数字
  * @param c 一个字符
@@ -270,14 +274,14 @@ int get_token(FILE** fp_pointer) {
     return kind;
 }
 
-int main() {
-    char path[1000];
-    scanf("%s", path);
-    FILE *fp = fopen(path, "r");
-    int get_token_res;
-    while((get_token_res = get_token(&fp)) != EOF) {
-        printf("%d %s\n", get_token_res, token_text);
-    }
-    printf("%d", lines_num);
-    return 0;
-}
+// int main() {
+//     char path[1000];
+//     scanf("%s", path);
+//     FILE *fp = fopen(path, "r");
+//     int get_token_res;
+//     while((get_token_res = get_token(&fp)) != EOF) {
+//         printf("%d %s\n", get_token_res, token_text);
+//     }
+//     printf("%d", lines_num);
+//     return 0;
+// }

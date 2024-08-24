@@ -1,6 +1,11 @@
+#ifndef GET_TOKEN_H
+#define GET_TOKEN_H
+
 #include<stdio.h>
-#include <stdlib.h>
+#include<stdlib.h>
+
 bool is_num(char c);
+
 enum TOKEN_KIND{
     ERROR_TOKEN, 
     IDENT, 
@@ -49,10 +54,6 @@ enum TOKEN_KIND{
     RC, //'}'
     HASH //'#'
 };
-//define?????  <>????????
-int lines_num;
-
-char token_text[300];
 
 /**
  * 读取*fp_pointer所指向的源文件的下一个单词
@@ -60,3 +61,5 @@ char token_text[300];
  * @return 识别出的单词的种类码
  */
 int get_token(FILE** fp_pointer);
+
+#endif
