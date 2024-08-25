@@ -1,11 +1,10 @@
 #ifndef SYNTAX_ANALYSIS_H
-#define SYSTAX_ANALYSIS_H
+#define SYNTAX_ANALYSIS_H
 #include "get_token.h"
 
 enum AST_NODE_TYPE {
     PROGRAM,
     EXT_DEF_SEQ,
-    EXT_DEF,
     EXT_VAR_DEF,
     TYPE_SPECIFIER, //类型限定符
     VAR_SEQ,
@@ -19,7 +18,8 @@ enum AST_NODE_TYPE {
     STATEMENT,
     EXPRESSION,
     WORD, 
-    ACTUAL_PARAM
+    ACTUAL_PARAM,
+    UNKNOWN // 未知类型（即没有确定）
 };
 
 typedef struct WORD_INFO{

@@ -31,23 +31,23 @@ bool is_letter(char c) {
  * @return 该字符串对应的种类码
  */
 TOKEN_KIND get_keyword(char* token_text) {
-    if(!strcmp(token_text, "int")) return INT;
-    if(!strcmp(token_text, "short")) return SHORT;
-    if(!strcmp(token_text, "char"))return CHAR;
-    if(!strcmp(token_text, "float")) return FLOAT;
-    if(!strcmp(token_text, "double")) return DOUBLE;
-    if(!strcmp(token_text, "long")) return LONG;
-    if(!strcmp(token_text, "if"))return IF;
-    if(!strcmp(token_text, "else")) return ELSE;
-    if(!strcmp(token_text, "break"))return BREAK;
+    if(!strcmp(token_text, "int"))      return INT;
+    if(!strcmp(token_text, "short"))    return SHORT;
+    if(!strcmp(token_text, "char"))     return CHAR;
+    if(!strcmp(token_text, "float"))    return FLOAT;
+    if(!strcmp(token_text, "double"))   return DOUBLE;
+    if(!strcmp(token_text, "long"))     return LONG;
+    if(!strcmp(token_text, "if"))       return IF;
+    if(!strcmp(token_text, "else"))     return ELSE;
+    if(!strcmp(token_text, "break"))    return BREAK;
     if(!strcmp(token_text, "continue")) return CONTINUE;
-    if(!strcmp(token_text, "return"))return RETURN;
-    if(!strcmp(token_text, "for")) return FOR;
-    if(!strcmp(token_text, "while"))return WHILE;
-    if(!strcmp(token_text, "do")) return DO;
-    if(!strcmp(token_text, "include")) return INCLUDE;
-    if(!strcmp(token_text, "struct")) return STRUCT;
-    if(!strcmp(token_text, "typedef")) return TYPEDEF;
+    if(!strcmp(token_text, "return"))   return RETURN;
+    if(!strcmp(token_text, "for"))      return FOR;
+    if(!strcmp(token_text, "while"))    return WHILE;
+    if(!strcmp(token_text, "do"))       return DO;
+    if(!strcmp(token_text, "include"))  return INCLUDE;
+    if(!strcmp(token_text, "struct"))   return STRUCT;
+    if(!strcmp(token_text, "typedef"))  return TYPEDEF;
     return IDENT; 
     //TODO;//自身值怎么处理
 }

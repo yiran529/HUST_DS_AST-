@@ -54,6 +54,7 @@ enum TOKEN_KIND{
     RC, //'}'
     HASH //'#'
 };
+//还差一个注释符号
 
 /**
  * 读取*fp_pointer所指向的源文件的下一个单词
