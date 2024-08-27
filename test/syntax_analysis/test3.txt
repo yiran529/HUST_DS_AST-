@@ -1,4 +1,3 @@
-int func(int a, int b);
-char func2(){
-    
-}
+float a, k;
+int func(int a, char b);
+char func2();

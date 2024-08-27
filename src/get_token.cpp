@@ -66,11 +66,11 @@ TOKEN_KIND process_float(char* token_text, int index, FILE** fp_pointer) {
         token_text[index++] = c;
         c = fgetc(fp);
     } while(is_num(c));
-    if(c == 'l' || c == 'L') {
-        token_text[index++] = c;
-        token_text[index] = '\0';
-        return DOUBLE_CONST;
-    }
+    // if(c == 'l' || c == 'L') {
+    //     token_text[index++] = c;
+    //     token_text[index] = '\0';
+    //     return DOUBLE_CONST;
+    // }
     if(c == 'f' || c == 'F') {
         token_text[index++] = c;
         token_text[index] = '\0';
@@ -79,7 +79,7 @@ TOKEN_KIND process_float(char* token_text, int index, FILE** fp_pointer) {
     token_text[index] = '\0';
     ungetc(c, fp);
     *fp_pointer = fp;
-    return FLOAT_CONST;
+    return DOUBLE_CONST;
 }
 
 /**
@@ -176,7 +176,7 @@ TOKEN_KIND process_number(char* token_text, int index, char c, FILE** fp_pointer
 
 
 /**
- * 处理非错误符号，变量的其它情况
+ * 处理非错误符号，变量，数值常量的其它情况
  * @param c 读取到的第一个字符
  * @param token_text 存储词的字符型数组
  * @param fp_pointer 输入文件当前的文件指针的地址
@@ -194,8 +194,24 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                   }
                   ungetc(c, fp);
                   return ASSIGN;
-        case '>': return GREATER;
-        case '<': return LESS;
+        case '>': c = fgetc(fp);
+                  if(c == '=') {
+                    *fp_pointer = fp;
+                    token_text[1] = '=';
+                    token_text[2] = '\0';
+                    return GREATEREQ;
+                  }
+                  ungetc(c, fp);
+                  return GREATER;
+        case '<': c = fgetc(fp);
+                  if(c == '=') {
+                    *fp_pointer = fp;
+                    token_text[1] = '=';
+                    token_text[2] = '\0';
+                    return LESSEQ;
+                  }
+                  ungetc(c, fp); 
+                  return LESS;
         case ';': return SEMI;
         case ',': return COMMA;
         case '&': c = fgetc(fp);
@@ -237,6 +253,30 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
         case '{': return LC;
         case '}': return RC;
         case '#': return HASH;
+        case '!': c = fgetc(fp);
+                  if(c == '=') {
+                    *fp_pointer = fp;
+                    token_text[1] = '=';
+                    token_text[2] = '\0';
+                    return NOTEQ;
+                  }
+                  ungetc(c, fp);
+                  return ERROR_TOKEN; // 暂时不考虑逻辑非
+        case '\'':c = fgetc(fp);
+                  if(!is_letter(c)) {
+                      ungetc(c, fp);
+                      return ERROR_TOKEN;
+                  }
+                  token_text[1] = c;
+                  c = fgetc(fp);
+                  if(c != '\'') {
+                      ungetc(c, fp);
+                      return ERROR_TOKEN;
+                  }
+                  token_text[2] = c;
+                  token_text[3] = '\0';
+                  *fp_pointer = fp;
+                  return CHAR_CONST;
         default:  if(feof(fp)) return EOF;
                   return ERROR_TOKEN;
     }

@@ -1,0 +1,5 @@
+int func() {
+    int a, b;
+    char c;
+    double e, f;
+}

@@ -14,6 +14,7 @@ enum TOKEN_KIND{
     DOUBLE_CONST, 
     CHAR_CONST, 
     LONG_CONST, 
+    STRING_CONST,
     INCLUDE, 
     STRUCT, 
     TYPEDEF,
@@ -30,6 +31,7 @@ enum TOKEN_KIND{
     LESS, 
     GREATEREQ,// >=
     LESSEQ,// <=
+    NOTEQ,
     ASSIGN, 
     SEMI, 
     COMMA, 
@@ -54,7 +56,8 @@ enum TOKEN_KIND{
     RC, //'}'
     HASH //'#'
 };
-//还差一个注释符号
+//还差两个注释符号
+//还差一个不等于
 
 /**
  * 读取*fp_pointer所指向的源文件的下一个单词
