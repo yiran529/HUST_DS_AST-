@@ -135,7 +135,22 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer);
 /***********************************************************************************************************/
 
 /**
+ * 以cur_node(引用指针类型)为根构建表示return语句的AST。该表达式的第一个单词（标识符）已经存储在token_text中。
+ * 函数调用后，下一部分的单词BU会被读取。
+ * @param cur_node AST根的指针的引用
+ * @param fp_pointer 文件当前读取位置的双重指针
+ * @return return语句没有错误，返回true；否则返回false
+ */
+bool build_return_statement(AST_NODE*& cur_node, FILE** fp_pointer) {
+    assign_AST_node(cur_node, RETURN_STATEMENT);
+    cur_kind = get_token(fp_pointer);
+    return build_expression(cur_node-> first_child, fp_pointer, SEMI);
+}
+
+/**
  * 创建一个AST结点表示条件语句（if已经被读取）。若该函数被正确调用，下一部分的第一个单词也会被读取。
+ * 表示条件语句的第一个子节点代表表示条件的表达式，第二个子节点代表表示子句的表达式，第三个子节点
+ * （如果存在）表示else后面的复合语句或语句序列。
  * @param cur_node AST根的指针的引用
  * @param fp_pointer 文件当前读取位置的双重指针
  * @return 条件语句没有错误，返回true；否则返回false
@@ -160,12 +175,16 @@ bool build_conditional_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
     if(cur_kind != ELSE) return true;
 
     cur_kind = get_token(fp_pointer);
-    if(cur_kind == LC) 
+    if(cur_kind == LC) {
+        cur_kind = get_token(fp_pointer);
         return build_compound_statement(*get_child(cur_node, 3), fp_pointer);
-    else if(cur_kind == IF) 
-        return build_conditional_statement(*get_child(cur_node, 3), fp_pointer);
+    }
+    else if(cur_kind == IF) {
+        assign_AST_node(*get_child(cur_node, 3), STATEMENT_SEQ); // 让后面两种情况统一。总之，else后面要么是复合语句，要么是语句序列。
+        return build_conditional_statement((*get_child(cur_node, 3))-> first_child, fp_pointer);
+    }
     else { // else后面只有单纯的语句，即既不是符合语句，也不是if-else
-        assign_AST_node(cur_node-> first_child-> next_sibling-> next_sibling, STATEMENT_SEQ); // 为了复合语句的情况统一
+        assign_AST_node(cur_node-> first_child-> next_sibling-> next_sibling, STATEMENT_SEQ); 
         return build_statement((*get_child(cur_node, 3))-> first_child, fp_pointer);
     }
 }
@@ -311,6 +330,8 @@ bool build_var_list(AST_NODE* &cur_node, FILE** fp_pointer) {
     } else return false;
 }
 
+
+/*************************************************************************************************************/
 /**
  * 建立以cur_node为根的代表语句的AST（第一个单词已经读在token_text中）。如果该函数被正确调用，
  * 那么下一部分的第一个单词也会被读取。
@@ -333,13 +354,19 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
         return ret;
     } else if(cur_kind == IF) {
         return build_conditional_statement(cur_node, fp_pointer);
+    } else if(cur_kind == RETURN) {
+        if(build_return_statement(cur_node, fp_pointer) == false) return false;
+        cur_kind = get_token(fp_pointer);
+        return true;
+    } else if(cur_kind == WHILE) {
+        
     }
     return false;
 }
 
 /**
  * 建立以cur_node为根的代表语句序列的AST（第一个单词已经读在token_text中）。
- * 如果语句序列正确，那么下一部分第一个单词也会被读取。
+ * 如果语句序列正确，那么下一部分第一个单词也会被读取。 注意，只能用在复合语句中。
  * @param cur_node 表示语句序列的AST的根的指针引用
  * @param fp_pointer 文件当前读取位置的双重指针
  * @return 如果语句序列没有错，返回true; 否则返回false

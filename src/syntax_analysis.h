@@ -21,6 +21,7 @@ enum AST_NODE_TYPE {
     EXPRESSION,
     WORD, 
     ACTUAL_PARAM,
+    RETURN_STATEMENT,
     UNKNOWN // 未知类型（即没有确定）
 };
 

@@ -5,3 +5,4 @@
 5. 报错信息
 6. 特判 + -1
 7. 没有switch case
+8. if-else AST的表示有点奇怪
