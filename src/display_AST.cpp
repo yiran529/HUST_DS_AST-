@@ -2,22 +2,61 @@
 #include "display_AST.h"
 #include "get_token.h"
 #include "syntax_analysis.h"
-
+void display_statement_seq(AST_NODE* cur_node, int indent);
 void display_indent(int indent) {
-    char* one_indent = "    ";
+    char* one_indent = "  ";
     for(int i = 1; i <= indent; i++) printf("%s", one_indent);
 }
 
 void display_var_def(AST_NODE* cur_node, int indent);
 
-void display_statement_seq(AST_NODE* cur_node, int indent) {
+void display_expression_tree(AST_NODE* cur_node, int indent) {
     if(cur_node == NULL) return;
     display_indent(indent);
-    switch(cur_node-> first_child-> type){
-        case LOCAL_VAR_DEF:  printf("Local var definition: \n"); 
-                       display_var_def(cur_node-> first_child, indent + 1);
-                       break;
+    printf("%s\n", cur_node-> word.data);
+    display_expression_tree(cur_node-> first_child, indent + 1);
+    if(cur_node-> first_child)
+    display_expression_tree(cur_node-> first_child-> next_sibling, indent + 1);
+}
+
+void display_conditional_statement(AST_NODE* cur_node, int indent) {
+    display_indent(indent);
+    printf("condition: \n");
+    display_expression_tree(cur_node-> first_child-> first_child, indent + 1);
+
+    display_indent(indent);
+    printf("sub-statement: \n");
+    if(cur_node-> first_child-> next_sibling-> type == STATEMENT_SEQ)
+        display_statement_seq(cur_node-> first_child-> next_sibling, indent + 1);
+    else display_statement_seq(cur_node-> first_child-> next_sibling-> first_child, indent + 1);
+
+    if(cur_node-> first_child-> next_sibling-> next_sibling){
+        display_indent(indent);
+        printf("else: \n");
+        if(cur_node-> first_child-> next_sibling-> next_sibling-> type == COMPOUND_STATEMENT)
+            display_statement_seq(cur_node-> first_child-> next_sibling-> next_sibling-> first_child, indent + 1);
+        else display_statement(cur_node-> first_child-> next_sibling-> next_sibling, indent + 1);
     }
+}
+
+void display_statement(AST_NODE* cur_node, int indent) {
+    display_indent(indent);
+    switch(cur_node-> type){
+        case LOCAL_VAR_DEF:  printf("Local var definition: \n"); 
+                       display_var_def(cur_node, indent);
+                       break;
+        case EXPRESSION: printf("Expression tree: \n");
+                         display_expression_tree(cur_node-> first_child, indent); 
+                         break;
+        case CONDITIONAL_STATEMENT: printf("Conditional statement: \n");
+                        display_conditional_statement(cur_node, indent + 1);
+                        break;
+    }
+}
+
+void display_statement_seq(AST_NODE* cur_node, int indent) {
+    if(cur_node == NULL) return;
+    display_statement(cur_node-> first_child, indent + 1);
     display_statement_seq(cur_node-> first_child-> next_sibling, indent);
 }
 

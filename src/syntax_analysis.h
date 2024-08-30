@@ -17,6 +17,7 @@ enum AST_NODE_TYPE {
     LOCAL_VAR_DEF,
     STATEMENT_SEQ,
     STATEMENT,
+    CONDITIONAL_STATEMENT,
     EXPRESSION,
     WORD, 
     ACTUAL_PARAM,
@@ -35,20 +36,9 @@ typedef struct AST_NODE{ // 采用孩子兄弟法存储多叉树
 }AST_NODE;
 
 
-int operator_cmp[200][200] = 
-{
-    {1, 1, 0, 0, 0, 1, 3, 1, 1, 1},
-    {1, 1, 0, 0, 0, 1, 3, 1, 1, 1},
-    {1, 1, 1, 1, 0, 1, 3, 1, 1, 1},
-    {1, 1, 1, 1, 0, 1, 3, 1, 1, 1},
-    {0, 0, 0, 0, 0, 1, 3, 1, 1, 1},
-    {0, 0, 0, 0, 0, 2, 3, 1, 1, 1},
-    {1, 1, 1, 1, 1, 3, 3, 1, 1, 1},
-    {0, 0, 0, 0, 0, 3, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 1, 3, 1, 1, 1},
-    {0, 0, 0, 0, 0, 1, 3, 0, 1, 1}
-};
-// 0 表示小于
+bool is_const(int kind);
 
+bool is_operator(int kind);
 
+char* get_op(TOKEN_KIND kind);
 #endif

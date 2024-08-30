@@ -1,0 +1,12 @@
+int func() {
+    if(a > 1) { 
+        b == a;
+        a > (3 - 1);
+        if(a > 2)
+            1 + 1;
+    }
+    else if(iamstupid == false) {
+        a;
+    }
+    else first && second;
+}

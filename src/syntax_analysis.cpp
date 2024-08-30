@@ -42,6 +42,54 @@ bool is_const(int kind) { //判断是不是类型关键字
 }
 
 /**
+ * 判断一个种类编号是不是operator
+ * @param kind 将要进行判断的单词种类编号
+ * @return 如果是，则返回true；否则返回false
+ */
+bool is_operator(int kind) { //判断是不是类型关键字
+    return kind == PLUS      ||
+           kind == MINUS     ||
+           kind == MULTIPLY  ||
+           kind == DEVIDE    ||
+           kind == MOD       ||
+           kind == LP        ||
+           kind == EQ        ||
+           kind == GREATER   ||
+           kind == LESS      ||
+           kind == GREATEREQ ||
+           kind == LESSEQ    ||
+           kind == AND       ||
+           kind == OR        ||
+           kind == NOTEQ;
+           //还没有考虑赋值
+}
+
+/**
+ * 根据一个运算符对应单词的种类编号返回其对应的字符串
+ * @param kind 单词种类编号
+ * @return 字符串指针
+ */
+char* get_op(TOKEN_KIND kind) {
+    char* ret;
+    switch(kind) {
+        case PLUS:      return "+";
+        case MINUS:     return "-";
+        case MULTIPLY:  return "*";
+        case DEVIDE:    return "/";
+        case MOD:       return "%";
+        case GREATER:   return ">";
+        case LESS:      return "<";
+        case GREATEREQ: return ">=";
+        case LESSEQ:    return "<=";
+        case EQ:        return "==";
+        case NOTEQ:     return "!=";
+        case AND:       return "&&";
+        case OR:        return "||";
+        default:        return "ERROR at get_op!";
+    }
+}
+
+/**
  * 创建一个AST结点并初始化（该结点为WORD类型）
  * @param node 将要初始化的AST结点（引用指针类型）
  * @param type 结点类型
@@ -68,23 +116,159 @@ void assign_AST_node(AST_NODE* &node, AST_NODE_TYPE type) {
     node-> first_child = node-> next_sibling = NULL;
 }
 
+bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym);
+bool build_compound_statement(AST_NODE* &cur_node, FILE** fp_pointer);
+bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer);
+
+/***********************************************************************************************************/
+
 /**
- * 以cur_node(引用指针类型)为根构建表示表达式的AST。该表达式的第一个单词（标识符）已经存储在token_text中。
- * 函数调用后，下一部分的第一个单词也会被读取?。
+ * 创建一个AST结点表示条件语句（if已经被读取）。若该函数被正确调用，下一部分的第一个单词也会被读取。
  * @param cur_node AST根的指针的引用
  * @param fp_pointer 文件当前读取位置的双重指针
+ * @return 条件语句没有错误，返回true；否则返回false
+ */
+bool build_conditional_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
+    assign_AST_node(cur_node, CONDITIONAL_STATEMENT);
+
+    cur_kind = get_token(fp_pointer);
+    if(cur_kind != LP) return false;
+    cur_kind = get_token(fp_pointer);
+    if(build_expression(cur_node-> first_child, fp_pointer, RP) == false) return false;
+
+    cur_kind = get_token(fp_pointer);
+    if(cur_kind == LC) {
+        cur_kind = get_token(fp_pointer);
+        if(build_compound_statement(cur_node-> first_child-> next_sibling, fp_pointer) == false) return false;
+    } else {
+        assign_AST_node(cur_node-> first_child-> next_sibling, STATEMENT_SEQ); // 为了复合语句的情况统一
+        if(build_statement(cur_node-> first_child-> next_sibling-> first_child, fp_pointer) == false) return false;
+    }
+
+    if(cur_kind != ELSE) return true;
+
+    cur_kind = get_token(fp_pointer);
+    if(cur_kind == LC) 
+        return build_compound_statement(cur_node-> first_child-> next_sibling-> next_sibling, fp_pointer);
+    else if(cur_kind == IF) 
+        return build_conditional_statement(cur_node-> first_child-> next_sibling-> next_sibling, fp_pointer);
+    else {
+        assign_AST_node(cur_node-> first_child-> next_sibling-> next_sibling, STATEMENT_SEQ); // 为了复合语句的情况统一
+        return build_statement(cur_node-> first_child-> next_sibling-> next_sibling-> first_child, fp_pointer);
+    }
+}
+
+int op_cmp[200][200] = {
+    {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+    {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+    {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+    {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+    {0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1},
+    {0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1}
+};
+// 0 表示小于
+
+int op_num[100]; // 给每个可能在表达式中出现的表示运算的单词编号，便于表达式分析
+/**
+ * 给op_num初始化，索引为表达式中可能出现的表示运算符的单词，值为其对应的编号
+ */
+void assign_op_num() {
+    op_num[PLUS] = 0;
+    op_num[MINUS] = 1;
+    op_num[MULTIPLY] = 2;
+    op_num[DEVIDE] = 3;
+    op_num[MOD] = 4;
+    op_num[LP] = 5;
+    op_num[GREATER] = op_num[LESS] = op_num[GREATEREQ] = op_num[LESSEQ] = 6;
+    op_num[EQ] = op_num[NOTEQ] = 7;
+    op_num[HASH] = 8;
+    op_num[AND] = 9;
+    op_num[OR] = 10;
+}
+
+/**
+ * 以cur_node(引用指针类型)为根构建表示表达式的AST。该表达式的第一个单词（标识符）已经存储在token_text中。
+ * 函数调用后，一直读取至遇见正确的end_sym。
+ * @param cur_node AST根的指针的引用
+ * @param fp_pointer 文件当前读取位置的双重指针
+ * @param end_sym 标志表达式结束的单词。且要么是分号，要么是右括号。
  * @return 表达式没有错误，返回true；否则返回false
  */
-bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer) {
+bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym) {
+    assign_op_num();
     assign_AST_node(cur_node, EXPRESSION);
-    int op[300]; 
-    AST_NODE*  opn[300]; 
+    int       op[300]; 
+    AST_NODE* opn[300]; 
     int op_index = 0, opn_index = 0;
-    op[op_index++] = -1;
-    int error = 0;
-    while((strcmp(token_text, "#") !=0 || op[op_index] != -1) && !error) {
-;
+    op[op_index++] = HASH; // 用-1表示栈底元素
+
+
+    while(1) {
+        if(cur_kind == ERROR_TOKEN) return false;
+        if(cur_kind == SEMI && end_sym == SEMI) break;
+        if(cur_kind == IDENT || is_const(cur_kind)) {
+            if(opn_index > 0 && !is_operator(last_kind))  return false;
+            assign_AST_node(opn[opn_index++], WORD, (TOKEN_KIND)cur_kind, token_text);
+        } else if(is_operator(cur_kind)) {
+            if(cur_kind != LP && last_kind != IDENT && !is_const(last_kind) && last_kind != RP) return false;
+            if(cur_kind == LP && !is_operator(last_kind) && (op_index + opn_index > 1)) return false;
+            switch(op_cmp[op_num[cur_kind]][op_num[op[op_index - 1]]]) {
+                case 1: //大于
+                        op[op_index++] = cur_kind;  
+                        break;
+                case 0: //小于
+                        while(op_cmp[op_num[cur_kind]][op_num[op[op_index - 1]]] == 0 && op_index > 1) {
+                            AST_NODE* new_node; 
+                            assign_AST_node(new_node, WORD, (TOKEN_KIND)op[op_index - 1], get_op((TOKEN_KIND)op[op_index - 1]));
+                            op_index--;
+                            new_node-> first_child = opn[opn_index - 2]; // bad smell
+                            new_node-> first_child-> next_sibling = opn[opn_index - 1];
+                            opn_index--;
+                            opn[opn_index - 1] = new_node;
+                        }
+                        op[op_index++] = cur_kind;
+                        break;
+                // case 2: break; 等于
+            }
+        } else if(cur_kind == RP) {
+            while(op[op_index - 1] != LP && op_index > 1) {
+                AST_NODE* new_node; 
+                assign_AST_node(new_node, WORD, (TOKEN_KIND)op[opn_index - 1], get_op((TOKEN_KIND)op[op_index - 1]));
+                op_index--;
+                new_node-> first_child = opn[opn_index - 2]; // bad smell
+                new_node-> first_child-> next_sibling = opn[opn_index - 1];
+                opn_index--;
+                opn[opn_index - 1] = new_node;
+            }
+            if(op_index == 1 && opn_index == 1 && end_sym == RP) {
+                cur_node-> first_child = opn[0];
+                return true;
+            }
+            else if(op_index == 1) return false;
+            op_index--; // 将左括号出栈
+        } else return false;
+        last_kind = cur_kind;
+        strcpy(token_text_copy, token_text);
+        cur_kind = get_token(fp_pointer);
     }
+    //最后将剩下的进行计算, 只针对结尾是分号的情况
+    while(op_index > 1 && op[op_index - 1] != LP) {
+        AST_NODE* new_node; 
+        assign_AST_node(new_node, WORD, (TOKEN_KIND)op[opn_index - 1], get_op((TOKEN_KIND)op[op_index - 1]));
+        op_index--;
+        new_node-> first_child = opn[opn_index - 2]; // bad smell
+        new_node-> first_child-> next_sibling = opn[opn_index - 1];
+        opn_index--;
+        opn[opn_index - 1] = new_node;
+    }
+    if(op[op_index - 1] == LP) return false;
+    cur_node->first_child = opn[0]; 
+    return true;
 }
 
 /**
@@ -109,7 +293,6 @@ bool build_var_list(AST_NODE* &cur_node, FILE** fp_pointer) {
         return build_var_list(cur_node, fp_pointer);
     } else if(cur_kind == IDENT) {
         assign_AST_node(cur_node->first_child, WORD, IDENT, token_text);
-
         last_kind = cur_kind;
         cur_kind = get_token(fp_pointer);
         return build_var_list(cur_node-> first_child-> next_sibling, fp_pointer);
@@ -117,21 +300,29 @@ bool build_var_list(AST_NODE* &cur_node, FILE** fp_pointer) {
 }
 
 /**
- * 建立以cur_node为根的代表语句的AST（第一个单词已经读在token_text中）。
+ * 建立以cur_node为根的代表语句的AST（第一个单词已经读在token_text中）。如果该函数被正确调用，
+ * 那么下一部分的第一个单词也会被读取。
  * 另外，注意这里的“语句”对原来的进行了一定拓展。
  * @param cur_node 表示语句的AST的根的指针引用
  * @param fp_pointer 文件当前读取位置的双重指针
  * @return 如果语句没有错，返回true; 否则返回false
  */
 bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
-    if(is_type_specifier(cur_kind)) {
+    if(cur_kind == ERROR_TOKEN || cur_kind == EOF) return false;
+    else if(is_type_specifier(cur_kind)) { // 是局部变量定义
         assign_AST_node(cur_node, LOCAL_VAR_DEF);
         assign_AST_node(cur_node-> first_child, WORD, (TOKEN_KIND)cur_kind, token_text);
 
         cur_kind = get_token(fp_pointer);
         return build_var_list(cur_node-> first_child-> next_sibling, fp_pointer);
+    } else if(cur_kind == IDENT || is_const(cur_kind) || cur_kind == LP) { // 是表达式
+        bool ret = build_expression(cur_node, fp_pointer, SEMI);
+        cur_kind = get_token(fp_pointer);
+        return ret;
+    } else if(cur_kind == IF) {
+        return build_conditional_statement(cur_node, fp_pointer);
     }
-    return true;
+    return false;
 }
 
 /**
@@ -148,13 +339,13 @@ bool build_statement_seq(AST_NODE* &cur_node, FILE** fp_pointer) {
     }
 
     assign_AST_node(cur_node, STATEMENT_SEQ);
-    build_statement(cur_node-> first_child, fp_pointer);
+    if(build_statement(cur_node-> first_child, fp_pointer) == false) return false;
     return build_statement_seq(cur_node-> first_child-> next_sibling, fp_pointer);
 }
 
 /**
  * 建立以cur_node为根的代表复合语句的AST（第一个单词，即左括号后一个单词，已经读在token_text中）。调用该函数后，
- * 如果符合语句定义正确，那么下一部分的第一个单词也会被读取。
+ * 如果符合语句定义正确，那么下一部分的第一个单词(右括号后一个单词)也会被读取。
  * @param cur_node 表示复合语句的AST的根的指针引用
  * @param fp_pointer 文件当前读取位置的双重指针
  * @return 如果复合语句没有错，返回true; 否则返回false
@@ -304,7 +495,9 @@ int main() {
     char path[1000];
     scanf("%s", path);
     FILE *fp = fopen(path, "r");
-    build_program(&fp);
+;
+    if(build_program(&fp)) 
     display_AST(root, 0);
+    else  printf("ERROR!");
     return 0;
 }
