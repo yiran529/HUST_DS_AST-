@@ -116,6 +116,18 @@ void assign_AST_node(AST_NODE* &node, AST_NODE_TYPE type) {
     node-> first_child = node-> next_sibling = NULL;
 }
 
+/**
+ * 获取node的第x个孩子的双重指针
+ * @param node 父节点
+ * @param x 所需要获取的孩子是父节点的第几个孩子
+ * @return 所获取的孩子的双重指针
+ */
+struct AST_NODE** get_child(AST_NODE* node, int x) {
+    AST_NODE** cur_node =  &node-> first_child;
+    for(int i = 2; i <= x; i++) cur_node = &((*cur_node)-> next_sibling);
+    return cur_node; 
+}
+
 bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym);
 bool build_compound_statement(AST_NODE* &cur_node, FILE** fp_pointer);
 bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer);
@@ -149,12 +161,12 @@ bool build_conditional_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
 
     cur_kind = get_token(fp_pointer);
     if(cur_kind == LC) 
-        return build_compound_statement(cur_node-> first_child-> next_sibling-> next_sibling, fp_pointer);
+        return build_compound_statement(*get_child(cur_node, 3), fp_pointer);
     else if(cur_kind == IF) 
-        return build_conditional_statement(cur_node-> first_child-> next_sibling-> next_sibling, fp_pointer);
-    else {
+        return build_conditional_statement(*get_child(cur_node, 3), fp_pointer);
+    else { // else后面只有单纯的语句，即既不是符合语句，也不是if-else
         assign_AST_node(cur_node-> first_child-> next_sibling-> next_sibling, STATEMENT_SEQ); // 为了复合语句的情况统一
-        return build_statement(cur_node-> first_child-> next_sibling-> next_sibling-> first_child, fp_pointer);
+        return build_statement((*get_child(cur_node, 3))-> first_child, fp_pointer);
     }
 }
 

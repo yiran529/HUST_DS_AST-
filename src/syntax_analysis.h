@@ -36,9 +36,12 @@ typedef struct AST_NODE{ // 采用孩子兄弟法存储多叉树
 }AST_NODE;
 
 
+
 bool is_const(int kind);
 
 bool is_operator(int kind);
 
 char* get_op(TOKEN_KIND kind);
+
+struct AST_NODE** get_child(AST_NODE* node, int x);
 #endif

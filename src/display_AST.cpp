@@ -27,15 +27,15 @@ void display_conditional_statement(AST_NODE* cur_node, int indent) {
     display_indent(indent);
     printf("sub-statement: \n");
     if(cur_node-> first_child-> next_sibling-> type == STATEMENT_SEQ)
-        display_statement_seq(cur_node-> first_child-> next_sibling, indent + 1);
-    else display_statement_seq(cur_node-> first_child-> next_sibling-> first_child, indent + 1);
+        display_statement_seq(*get_child(cur_node, 2), indent + 1);
+    else display_statement_seq((*get_child(cur_node, 2))-> first_child, indent + 1);
 
     if(cur_node-> first_child-> next_sibling-> next_sibling){
         display_indent(indent);
         printf("else: \n");
         if(cur_node-> first_child-> next_sibling-> next_sibling-> type == COMPOUND_STATEMENT)
             display_statement_seq(cur_node-> first_child-> next_sibling-> next_sibling-> first_child, indent + 1);
-        else display_statement(cur_node-> first_child-> next_sibling-> next_sibling, indent + 1);
+        else display_statement_seq(cur_node-> first_child-> next_sibling-> next_sibling, indent + 1);
     }
 }
 
