@@ -288,7 +288,7 @@ int get_token(FILE** fp_pointer) {
     int index = 0;
     FILE* fp = *fp_pointer;
     char c;
-    while((c = fgetc(fp)) == ' ' || c == '\n') {if(c == '\n') lines_num++;} //过滤掉空白符号和换行
+    while((c = fgetc(fp)) == ' ' || c == '\t' || c == '\n') {if(c == '\n') lines_num++;} //过滤掉空白符号和换行
 
     if(is_letter(c)) {
         do {

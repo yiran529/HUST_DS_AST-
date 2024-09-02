@@ -133,6 +133,52 @@ bool build_compound_statement(AST_NODE* &cur_node, FILE** fp_pointer);
 bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer);
 
 /***********************************************************************************************************/
+/**
+ * 以cur_node(引用指针类型)为根构建表示for循环的AST。for已经存储在token_text中。函数调用后，下一部分的单词BU会被读取。
+ * 其中父节点的第一个孩子为代表for第一条语句的表达式，第二个孩子为代表for第二条语句，第三个孩子代表for第三条语句，第四个
+ * 孩子代表for语句后面的复合语句或单个语句（视为仅含一个语句的语句序列）。
+ * @param cur_node AST根的指针的引用
+ * @param fp_pointer 文件当前读取位置的双重指针
+ * @return for循环没有错误，返回true；否则返回false
+ */
+bool build_for_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
+    cur_kind = get_token(fp_pointer);
+    if(cur_kind != LP) return false;
+
+    assign_AST_node(cur_node, FOR_LOOP);
+    build_expression(cur_node-> first_child, fp_pointer, SEMI);
+    build_expression(*get_child(cur_node, 2), fp_pointer, SEMI);
+    build_expression(*get_child(cur_node, 3), fp_pointer, RP);
+
+    cur_kind = get_token(fp_pointer);
+    
+}
+
+/**
+ * 以cur_node(引用指针类型)为根构建表示while循环的AST。while后的第一个单词（如果是正确的话，应当是左括号）已经存储在token_text中。
+ * 函数调用后，下一部分的单词会被读取。
+ * 其中父节点的第一个孩子为代表循环继续的条件的表达式，第二个孩子为代表循环主主体的语句复合语句或语句序列（只有一个语句）。
+ * @param cur_node AST根的指针的引用
+ * @param fp_pointer 文件当前读取位置的双重指针
+ * @return while循环没有错误，返回true；否则返回false
+ */
+bool build_while_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
+    if(cur_kind != LP) return false;
+    assign_AST_node(cur_node, WHILE_LOOP);
+
+    cur_kind = get_token(fp_pointer);
+    if(build_expression(cur_node-> first_child, fp_pointer, RP) == false) return false;
+    
+    cur_kind = get_token(fp_pointer);
+    if(cur_kind == LC) {
+        cur_kind = get_token(fp_pointer);
+        if(build_compound_statement(*get_child(cur_node, 2), fp_pointer) == false) return false;
+    } else {
+        assign_AST_node(*get_child(cur_node, 2), STATEMENT_SEQ);
+        return build_statement((*get_child(cur_node, 2))-> first_child, fp_pointer);
+    } 
+    return true;
+}
 
 /**
  * 以cur_node(引用指针类型)为根构建表示return语句的AST。该表达式的第一个单词（标识符）已经存储在token_text中。
@@ -184,7 +230,7 @@ bool build_conditional_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
         return build_conditional_statement((*get_child(cur_node, 3))-> first_child, fp_pointer);
     }
     else { // else后面只有单纯的语句，即既不是符合语句，也不是if-else
-        assign_AST_node(cur_node-> first_child-> next_sibling-> next_sibling, STATEMENT_SEQ); 
+        assign_AST_node(*get_child(cur_node, 3), STATEMENT_SEQ); 
         return build_statement((*get_child(cur_node, 3))-> first_child, fp_pointer);
     }
 }
@@ -235,6 +281,7 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
     assign_AST_node(cur_node, EXPRESSION);
     int       op[300]; 
     AST_NODE* opn[300]; 
+    opn[0] = NULL; // 解决空语句的问题
     int op_index = 0, opn_index = 0;
     op[op_index++] = HASH; // 用-1表示栈底元素
 
@@ -298,7 +345,7 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
         opn[opn_index - 1] = new_node;
     }
     if(op[op_index - 1] == LP) return false;
-    cur_node->first_child = opn[0]; 
+    cur_node-> first_child = opn[0]; 
     return true;
 }
 
@@ -345,10 +392,9 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
     else if(is_type_specifier(cur_kind)) { // 是局部变量定义
         assign_AST_node(cur_node, LOCAL_VAR_DEF);
         assign_AST_node(cur_node-> first_child, WORD, (TOKEN_KIND)cur_kind, token_text);
-
         cur_kind = get_token(fp_pointer);
         return build_var_list(cur_node-> first_child-> next_sibling, fp_pointer);
-    } else if(cur_kind == IDENT || is_const(cur_kind) || cur_kind == LP) { // 是表达式
+    } else if(cur_kind == IDENT || is_const(cur_kind) || cur_kind == LP || cur_kind == SEMI) { // 是表达式(可以只含一个分号)
         bool ret = build_expression(cur_node, fp_pointer, SEMI);
         cur_kind = get_token(fp_pointer);
         return ret;
@@ -359,7 +405,13 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
         cur_kind = get_token(fp_pointer);
         return true;
     } else if(cur_kind == WHILE) {
-        
+        cur_kind = get_token(fp_pointer);
+        if(build_while_statement(cur_node, fp_pointer) == false) return false;
+        return true;
+    } else if(cur_kind == FOR) {
+        cur_kind = get_token(fp_pointer);
+        if(build_for_statement(cur_node, fp_pointer) == false) return false;
+        return true;
     }
     return false;
 }

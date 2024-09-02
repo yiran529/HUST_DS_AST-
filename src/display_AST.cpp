@@ -9,6 +9,20 @@ void display_indent(int indent) {
 }
 
 void display_var_def(AST_NODE* cur_node, int indent);
+void display_expression_tree(AST_NODE* cur_node, int indent);
+
+void display_while_loop(AST_NODE* cur_node, int indent) {
+    display_indent(indent);
+    printf("condition: \n");
+    display_indent(indent + 1);
+    printf("expression tree: \n");
+    display_expression_tree(cur_node-> first_child-> first_child, indent + 1);
+    display_indent(indent);
+    printf("sub-statement: \n");
+    if((*get_child(cur_node, 2))-> type == COMPOUND_STATEMENT)
+        display_statement_seq((*get_child(cur_node, 2))-> first_child, indent + 1);
+    else display_statement_seq((*get_child(cur_node, 2)), indent + 1);
+}
 
 void display_expression_tree(AST_NODE* cur_node, int indent) {
     if(cur_node == NULL) return;
@@ -27,8 +41,8 @@ void display_conditional_statement(AST_NODE* cur_node, int indent) {
     display_indent(indent);
     printf("sub-statement: \n");
     if(cur_node-> first_child-> next_sibling-> type == STATEMENT_SEQ)
-        display_statement_seq(*get_child(cur_node, 2), indent + 1);
-    else display_statement_seq((*get_child(cur_node, 2))-> first_child, indent + 1);
+        display_statement_seq(*get_child(cur_node, 2), indent);
+    else display_statement_seq((*get_child(cur_node, 2))-> first_child, indent);
 
     if(*get_child(cur_node, 3)){
         display_indent(indent);
@@ -45,8 +59,10 @@ void display_statement(AST_NODE* cur_node, int indent) {
         case LOCAL_VAR_DEF:  printf("Local var definition: \n"); 
                        display_var_def(cur_node, indent + 1);
                        break;
-        case EXPRESSION: printf("Expression tree: \n");
+        case EXPRESSION: printf("expression tree: \n");
+                         if(cur_node-> first_child) // 不是空语句
                          display_expression_tree(cur_node-> first_child, indent); 
+                         else {display_indent(indent); printf("none \n"); }
                          break;
         case CONDITIONAL_STATEMENT: printf("Conditional statement: \n");
                         display_conditional_statement(cur_node, indent + 1);
@@ -56,12 +72,15 @@ void display_statement(AST_NODE* cur_node, int indent) {
                          printf("Expression tree: \n");
                          display_expression_tree(cur_node-> first_child-> first_child, indent + 1);
                          break;
+        case WHILE_LOOP: printf("While loop: \n");
+                         display_while_loop(cur_node, indent + 1);
+                         break; 
     }
 }
 
 void display_statement_seq(AST_NODE* cur_node, int indent) {
     if(cur_node == NULL) return;
-    display_statement(cur_node-> first_child, indent + 1);
+    display_statement(cur_node-> first_child, indent);
     display_statement_seq(cur_node-> first_child-> next_sibling, indent);
 }
 
