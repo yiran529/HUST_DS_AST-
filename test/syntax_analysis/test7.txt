@@ -4,7 +4,7 @@ while(a > 1) {
 }
 int fun2(short lele) {
 	while(a + b == c) {
-		if(c *9 - 1) 
+		if(c *9 - 1!= 10) 
 		 a +1;
 	}
 	while(1) ;

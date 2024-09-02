@@ -142,10 +142,15 @@ TOKEN_KIND process_number(char* token_text, int index, char c, FILE** fp_pointer
             ungetc(c, fp);
             token_text[index] = '\0';
             return INT_CONST;
-        } else if(c != '.') {
+        } else if(is_num(c)){ // 八进制数表示错误
             ungetc(c, fp);
             *fp_pointer = fp;
             return ERROR_TOKEN;
+        } else { // 单个数字0
+            ungetc(c, fp);
+            *fp_pointer = fp;
+            token_text[1] = '\0';
+            return INT_CONST;
         }
     }
 
@@ -194,7 +199,8 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                     return EQ;
                   }
                   ungetc(c, fp);
-                  return ASSIGN;
+                  //*fp_pointer = fp; 为什么不能有这句？
+                  return ASSIGN; 
         case '>': c = fgetc(fp);
                   if(c == '=') {
                     *fp_pointer = fp;
@@ -203,6 +209,7 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                     return GREATEREQ;
                   }
                   ungetc(c, fp);
+                  *fp_pointer = fp;
                   return GREATER;
         case '<': c = fgetc(fp);
                   if(c == '=') {
@@ -212,6 +219,7 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                     return LESSEQ;
                   }
                   ungetc(c, fp); 
+                  *fp_pointer = fp;
                   return LESS;
         case ';': return SEMI;
         case ',': return COMMA;
@@ -251,6 +259,8 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                     token_text[2] = '\0';
                     return END_OF_MULTILINE_COMMENT;
                   } 
+                  ungetc(c, fp);
+                  *fp_pointer = fp;
                   return MULTIPLY; 
         case '/': c = fgetc(fp);
                   if(c == '/') {
@@ -264,6 +274,8 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                     token_text[2] = '\0';
                     return START_OF_MULTILINE_COMMENT;
                   }
+                  ungetc(c, fp);
+                  *fp_pointer = fp;
                   return DEVIDE; 
         case '%': return MOD;
         case '(': return LP;
@@ -281,6 +293,7 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                     return NOTEQ;
                   }
                   ungetc(c, fp);
+                  //*fp_pointer = fp;
                   return ERROR_TOKEN; // 暂时不考虑逻辑非
         case '\'':c = fgetc(fp);
                   if(!is_letter(c)) {

@@ -1,3 +1,10 @@
 void f() {
     int a;
+    while(8 *(-11) == 1110-lll){
+        while(true) for(;;){
+            for(i = 1;i<=100;i=i+1)return 1000;
+            if(i*iuyh+100+(a=199)&&6!=0) 
+            1-2;
+        }
+    }
 }
