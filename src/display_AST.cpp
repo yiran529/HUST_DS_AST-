@@ -104,6 +104,8 @@ void display_statement(AST_NODE* cur_node, int indent) {
         case FOR_LOOP:  printf("For loop: \n");
                         display_for_loop(cur_node, indent + 1);
                         break;
+        case BREAK_STATEMENT: printf("break statement\n"); break;
+        case CONTINUE_STATEMENT: printf("continue statement\n"); break;
     }
 }
 

@@ -2,6 +2,9 @@
 #include<stdio.h>
 #include<string.h>
 #include "get_token.h"
+#include "syntax_analysis.h"
+
+extern int cur_kind; // 引用自syntax_analysis.cpp, 用以处理负号与负数的问题
 
 int lines_num;
 
@@ -146,7 +149,7 @@ TOKEN_KIND process_number(char* token_text, int index, char c, FILE** fp_pointer
             ungetc(c, fp);
             *fp_pointer = fp;
             return ERROR_TOKEN;
-        } else { // 单个数字0
+        } else { // 单个数字0的情况需要特殊判断
             ungetc(c, fp);
             *fp_pointer = fp;
             token_text[1] = '\0';
@@ -244,13 +247,14 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
         case '+': return PLUS;
         case '-': {
                     char c = fgetc(fp);
-                    if(!is_num(c)) {
-                        ungetc(c, fp);
-                        return MINUS;
-                    }
-                    TOKEN_KIND kind = process_number(token_text, 1, c, &fp);
-                    *fp_pointer = fp;
-                    return kind;
+                    if(cur_kind == SEMI || cur_kind == LP) // 这里的cur_kind是上一个识别完成的单词
+                        if(is_num(c)) {
+                            TOKEN_KIND kind = process_number(token_text, 1, c, &fp);
+                            *fp_pointer = fp;
+                            return kind;
+                        } else return ERROR_TOKEN;
+                    ungetc(c, fp);
+                    return MINUS;
                   }
         case '*': c = fgetc(fp);
                   if(c == '/') {

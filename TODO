@@ -1,5 +1,5 @@
-1. expression没有实现赋值
-2. 注释没有实现
+1. expression没有实现赋值 DONE!
+2. 注释没有实现 
 3. .f等问题
 4. void!! 只能是函数的类型  DONE!
 5. 报错信息
@@ -10,5 +10,5 @@
 10. for后面第一条语句没有实现能初始化变量的操作
 11. 不能判断复合语句里完全没有东西的情况
 12. 没有实现数组
-13. break continue 没有在syntax中
-14.1-2有问题
+13. break continue 没有在syntax中   DONE!
+14.1-2有问题    DONE!

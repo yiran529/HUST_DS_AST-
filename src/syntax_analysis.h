@@ -24,6 +24,8 @@ enum AST_NODE_TYPE {
     RETURN_STATEMENT,
     WHILE_LOOP,
     FOR_LOOP,
+    BREAK_STATEMENT,
+    CONTINUE_STATEMENT,
     UNKNOWN // 未知类型（即没有确定）
 };
 

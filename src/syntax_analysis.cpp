@@ -404,7 +404,7 @@ bool build_var_list(AST_NODE* &cur_node, FILE** fp_pointer) {
 /*************************************************************************************************************/
 /**
  * 建立以cur_node为根的代表语句的AST（第一个单词已经读在token_text中）。如果该函数被正确调用，
- * 那么下一部分的第一个单词也会被读取。
+ * 那么下一部分的第一个单词(一般来说，是分号后面一个单词）也会被读取。
  * 另外，注意这里的“语句”对原来的进行了一定拓展。
  * @param cur_node 表示语句的AST的根的指针引用
  * @param fp_pointer 文件当前读取位置的双重指针
@@ -433,6 +433,18 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
         return true;
     } else if(cur_kind == FOR) {
         if(build_for_statement(cur_node, fp_pointer) == false) return false;
+        return true;
+    } else if(cur_kind == BREAK) {
+        cur_kind = get_token(fp_pointer);
+        if(cur_kind != SEMI) return false;
+        assign_AST_node(cur_node, BREAK_STATEMENT);
+        cur_kind = get_token(fp_pointer);
+        return true;
+    } else if(cur_kind == CONTINUE) {
+        cur_kind = get_token(fp_pointer);
+        if(cur_kind != SEMI) return false;
+        assign_AST_node(cur_node, CONTINUE_STATEMENT);
+        cur_kind = get_token(fp_pointer);
         return true;
     }
     return false;
