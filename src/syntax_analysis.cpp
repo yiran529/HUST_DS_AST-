@@ -6,6 +6,8 @@ extern char token_text[300];
 
 char token_text_copy[300];
 
+char error_message[300]; // 用以存储报错信息
+
 AST_NODE* root;
 
 AST_NODE** AST;
@@ -145,7 +147,10 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer);
  */
 bool build_for_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
     cur_kind = get_token(fp_pointer);
-    if(cur_kind != LP) return false;
+    if(cur_kind != LP) {
+        strcpy(error_message, "'for' should be followed by ')'.");
+        return false;
+    }
 
     assign_AST_node(cur_node, FOR_LOOP);
     cur_kind = get_token(fp_pointer);
@@ -478,6 +483,8 @@ bool build_statement_seq(AST_NODE* &cur_node, FILE** fp_pointer) {
 bool build_compound_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
     assign_AST_node(cur_node, COMPOUND_STATEMENT);
     
+    if(cur_kind == RC) return false; // 处理复合语句完全为空的情况
+
     if(build_statement_seq(cur_node-> first_child, fp_pointer) == false) return false;
     //前面的build_statement_seq的调用保证了本函数的post-condition会被满足
     return true;

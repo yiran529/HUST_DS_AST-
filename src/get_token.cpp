@@ -247,7 +247,7 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
         case '+': return PLUS;
         case '-': {
                     char c = fgetc(fp);
-                    if(cur_kind == SEMI || cur_kind == LP) // 这里的cur_kind是上一个识别完成的单词
+                    if(cur_kind == SEMI || cur_kind == LP || cur_kind == LC) // 这里的cur_kind是上一个识别完成的单词
                         if(is_num(c)) {
                             TOKEN_KIND kind = process_number(token_text, 1, c, &fp);
                             *fp_pointer = fp;
