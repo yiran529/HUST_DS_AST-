@@ -11,6 +11,32 @@ void display_indent(int indent) {
 void display_var_def(AST_NODE* cur_node, int indent);
 void display_expression_tree(AST_NODE* cur_node, int indent);
 
+void display_for_loop(AST_NODE* &cur_node, int indent) {
+    display_indent(indent);
+    printf("init: \n");
+    if((*get_child(cur_node, 1))-> first_child) 
+        display_expression_tree((*get_child(cur_node, 1))-> first_child, indent + 1);
+    else {display_indent(indent + 1); printf("none\n");}
+
+    display_indent(indent);
+    printf("condition: \n");
+    if((*get_child(cur_node, 2))-> first_child) 
+        display_expression_tree((*get_child(cur_node, 2))-> first_child, indent + 1);
+    else {display_indent(indent + 1); printf("none\n");}
+
+    display_indent(indent);
+    printf("increment: \n");
+    if((*get_child(cur_node, 3))-> first_child) 
+        display_expression_tree((*get_child(cur_node, 3))-> first_child, indent + 1);
+    else {display_indent(indent + 1); printf("none\n");}
+
+    display_indent(indent);
+    printf("sub-statement: \n");
+    if((*get_child(cur_node, 4))-> type == COMPOUND_STATEMENT)
+        display_statement_seq((*get_child(cur_node, 4))-> first_child, indent + 1);
+    else display_statement_seq((*get_child(cur_node, 4)), indent + 1);
+}
+
 void display_while_loop(AST_NODE* cur_node, int indent) {
     display_indent(indent);
     printf("condition: \n");
@@ -41,8 +67,8 @@ void display_conditional_statement(AST_NODE* cur_node, int indent) {
     display_indent(indent);
     printf("sub-statement: \n");
     if(cur_node-> first_child-> next_sibling-> type == STATEMENT_SEQ)
-        display_statement_seq(*get_child(cur_node, 2), indent);
-    else display_statement_seq((*get_child(cur_node, 2))-> first_child, indent);
+        display_statement_seq(*get_child(cur_node, 2), indent + 1);
+    else display_statement_seq((*get_child(cur_node, 2))-> first_child, indent + 1);
 
     if(*get_child(cur_node, 3)){
         display_indent(indent);
@@ -75,6 +101,9 @@ void display_statement(AST_NODE* cur_node, int indent) {
         case WHILE_LOOP: printf("While loop: \n");
                          display_while_loop(cur_node, indent + 1);
                          break; 
+        case FOR_LOOP:  printf("For loop: \n");
+                        display_for_loop(cur_node, indent + 1);
+                        break;
     }
 }
 
@@ -92,6 +121,7 @@ void display_type(TOKEN_KIND kind) {
         case LONG:   printf("long");  break;
         case FLOAT:  printf("float"); break;
         case DOUBLE: printf("double");break;
+        case VOID:   printf("void");  break;
     }
 }
 

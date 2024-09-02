@@ -24,6 +24,7 @@ enum TOKEN_KIND{
     DOUBLE, 
     CHAR, 
     LONG, 
+    VOID,
     IF, 
     ELSE, 
     EQ, 
@@ -54,10 +55,12 @@ enum TOKEN_KIND{
     RB, //']'
     LC, //'{'
     RC, //'}'
-    HASH //'#'
+    HASH, //'#'
+    DOUBLE_SLASH, // 单行注释的符号
+    START_OF_MULTILINE_COMMENT, // namely "/*"
+    END_OF_MULTILINE_COMMENT    // namely "*/"
 };
 //还差两个注释符号
-//还差一个不等于
 
 /**
  * 读取*fp_pointer所指向的源文件的下一个单词

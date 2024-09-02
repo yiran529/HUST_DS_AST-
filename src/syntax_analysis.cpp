@@ -60,6 +60,7 @@ bool is_operator(int kind) { //判断是不是类型关键字
            kind == LESSEQ    ||
            kind == AND       ||
            kind == OR        ||
+           kind == ASSIGN    ||
            kind == NOTEQ;
            //还没有考虑赋值
 }
@@ -85,6 +86,7 @@ char* get_op(TOKEN_KIND kind) {
         case NOTEQ:     return "!=";
         case AND:       return "&&";
         case OR:        return "||";
+        case ASSIGN:    return "=";
         default:        return "ERROR at get_op!";
     }
 }
@@ -134,7 +136,7 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer);
 
 /***********************************************************************************************************/
 /**
- * 以cur_node(引用指针类型)为根构建表示for循环的AST。for已经存储在token_text中。函数调用后，下一部分的单词BU会被读取。
+ * 以cur_node(引用指针类型)为根构建表示for循环的AST。for已经存储在token_text中。函数正确调用后，下一部分的单词会被读取。
  * 其中父节点的第一个孩子为代表for第一条语句的表达式，第二个孩子为代表for第二条语句，第三个孩子代表for第三条语句，第四个
  * 孩子代表for语句后面的复合语句或单个语句（视为仅含一个语句的语句序列）。
  * @param cur_node AST根的指针的引用
@@ -146,12 +148,28 @@ bool build_for_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
     if(cur_kind != LP) return false;
 
     assign_AST_node(cur_node, FOR_LOOP);
-    build_expression(cur_node-> first_child, fp_pointer, SEMI);
-    build_expression(*get_child(cur_node, 2), fp_pointer, SEMI);
-    build_expression(*get_child(cur_node, 3), fp_pointer, RP);
+    cur_kind = get_token(fp_pointer);
+    if(build_expression(cur_node-> first_child, fp_pointer, SEMI) == false) return false;
+    cur_kind = get_token(fp_pointer);
+    if(build_expression(*get_child(cur_node, 2), fp_pointer, SEMI) == false) return false;
+    cur_kind = get_token(fp_pointer);
+    if(cur_kind != RP) {// 判断第三个表达式是否为空（允许为空）
+        if(build_expression(*get_child(cur_node, 3), fp_pointer, RP) == false) return false;
+    }
+    else {
+        assign_AST_node(*get_child(cur_node, 3), EXPRESSION);
+    }
 
     cur_kind = get_token(fp_pointer);
-    
+    if(cur_kind == LC) {
+        cur_kind = get_token(fp_pointer);
+        if(build_compound_statement(*get_child(cur_node, 4), fp_pointer) == false) return false;
+    }
+    else {
+        assign_AST_node(*get_child(cur_node, 4), STATEMENT_SEQ);
+        if(build_statement((*get_child(cur_node, 4))-> first_child, fp_pointer) == false) return false;
+    }
+    return true;
 }
 
 /**
@@ -236,17 +254,18 @@ bool build_conditional_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
 }
 
 int op_cmp[200][200] = {
-    {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1},
-    {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1},
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-    {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1},
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-    {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
-    {0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1},
-    {0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1}
+    {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1},
+    {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1},
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+    {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1},
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+    {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1},
+    {0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1},
+    {0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1},
+    {0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1}
 };
 // 0 表示小于
 
@@ -266,6 +285,7 @@ void assign_op_num() {
     op_num[HASH] = 8;
     op_num[AND] = 9;
     op_num[OR] = 10;
+    op_num[ASSIGN] = 11;
 }
 
 /**
@@ -293,6 +313,9 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
             if(opn_index > 0 && !is_operator(last_kind))  return false;
             assign_AST_node(opn[opn_index++], WORD, (TOKEN_KIND)cur_kind, token_text);
         } else if(is_operator(cur_kind)) {
+            if(cur_kind == ASSIGN) { // 赋值符号情况特殊，需要特别判断
+                if(last_kind != IDENT) return false;
+            }
             if(cur_kind != LP && last_kind != IDENT && !is_const(last_kind) && last_kind != RP) return false;
             if(cur_kind == LP && !is_operator(last_kind) && (op_index + opn_index > 1)) return false;
             switch(op_cmp[op_num[cur_kind]][op_num[op[op_index - 1]]]) {
@@ -300,6 +323,7 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
                         op[op_index++] = cur_kind;  
                         break;
                 case 0: //小于
+                        if(cur_kind == ASSIGN) return false;
                         while(op_cmp[op_num[cur_kind]][op_num[op[op_index - 1]]] == 0 && op_index > 1) {
                             AST_NODE* new_node; 
                             assign_AST_node(new_node, WORD, (TOKEN_KIND)op[op_index - 1], get_op((TOKEN_KIND)op[op_index - 1]));
@@ -311,7 +335,6 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
                         }
                         op[op_index++] = cur_kind;
                         break;
-                // case 2: break; 等于
             }
         } else if(cur_kind == RP) {
             while(op[op_index - 1] != LP && op_index > 1) {
@@ -409,7 +432,6 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
         if(build_while_statement(cur_node, fp_pointer) == false) return false;
         return true;
     } else if(cur_kind == FOR) {
-        cur_kind = get_token(fp_pointer);
         if(build_for_statement(cur_node, fp_pointer) == false) return false;
         return true;
     }
@@ -528,7 +550,8 @@ bool build_var_def(AST_NODE* &cur_node, FILE** fp_pointer) {
 bool build_ext_def(AST_NODE* &cur_node, FILE** fp_pointer) {
     assign_AST_node(cur_node, UNKNOWN);
 
-    if(is_type_specifier(cur_kind)) 
+    int type = cur_kind;
+    if(is_type_specifier(cur_kind) || cur_kind == VOID) // 特殊判断函数返回值为空的情况
         assign_AST_node(cur_node-> first_child, WORD, (TOKEN_KIND)cur_kind, token_text);
     else {
         printf("%d\n", cur_kind);
@@ -545,6 +568,7 @@ bool build_ext_def(AST_NODE* &cur_node, FILE** fp_pointer) {
         cur_node-> type = (AST_NODE_TYPE)FUNC_DEF;
         return build_fun_def(cur_node, fp_pointer);
     } else {
+        if(type == VOID) return false; // 变量定义类型不能为void，这个情况需要特殊判断
         cur_node-> type = (AST_NODE_TYPE)EXT_VAR_DEF;
         return build_var_def(cur_node-> first_child-> next_sibling, fp_pointer);
     }

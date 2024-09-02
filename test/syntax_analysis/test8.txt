@@ -1,0 +1,15 @@
+int fff()
+{
+for(;i == 1;i == i + 1)
+a == b;
+}
+int ff(int a) {
+    for(i == 1; i >= 2; i ==a*1) 
+    for(j ==2; j<=1;j&&i)
+    if(i > 10)
+        {
+            int a;
+            while(1) return 1;
+        }
+    else if(a <1) return 100;
+}

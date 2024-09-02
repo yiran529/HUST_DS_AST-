@@ -8,8 +8,8 @@
                 "-fdiagnostics-color=always",
                 "-g",
                 "${file}",
-                "${fileDirname}\\get_token.cpp",
-                "${fileDirname}\\display_AST.cpp",
+                "${fileDirname}\\get_token.cpp", 
+                "${fileDirname}\\display_AST.cpp", 
                 "-o",
                 "${fileDirname}\\${fileBasenameNoExtension}.exe",
                 "-lstdc++"

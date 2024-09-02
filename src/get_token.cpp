@@ -37,6 +37,7 @@ TOKEN_KIND get_keyword(char* token_text) {
     if(!strcmp(token_text, "float"))    return FLOAT;
     if(!strcmp(token_text, "double"))   return DOUBLE;
     if(!strcmp(token_text, "long"))     return LONG;
+    if(!strcmp(token_text, "void"))     return VOID;
     if(!strcmp(token_text, "if"))       return IF;
     if(!strcmp(token_text, "else"))     return ELSE;
     if(!strcmp(token_text, "break"))    return BREAK;
@@ -243,8 +244,27 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                     *fp_pointer = fp;
                     return kind;
                   }
-        case '*': return MULTIPLY;
-        case '/': return DEVIDE;
+        case '*': c = fgetc(fp);
+                  if(c == '/') {
+                    *fp_pointer = fp;  
+                    token_text[1] = '/';
+                    token_text[2] = '\0';
+                    return END_OF_MULTILINE_COMMENT;
+                  } 
+                  return MULTIPLY; 
+        case '/': c = fgetc(fp);
+                  if(c == '/') {
+                    *fp_pointer = fp;  
+                    token_text[1] = '/';
+                    token_text[2] = '\0';
+                    return DOUBLE_SLASH;
+                  } else if(c == '*') {
+                    *fp_pointer = fp;  
+                    token_text[1] = '*';
+                    token_text[2] = '\0';
+                    return START_OF_MULTILINE_COMMENT;
+                  }
+                  return DEVIDE; 
         case '%': return MOD;
         case '(': return LP;
         case ')': return RP;
