@@ -70,4 +70,11 @@ enum TOKEN_KIND{
  */
 int get_token(FILE** fp_pointer);
 
+/**
+ * 根据给定的单词编号返回对应的单词种类的字符串表示
+ * @param kind 单词编号
+ * @return 对应的单词种类字符串表示
+ */
+char* get_token_kind(int kind);
+
 #endif

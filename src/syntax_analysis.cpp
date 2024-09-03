@@ -744,17 +744,3 @@ bool build_program(FILE** fp_pointer) {
     //*AST = root;
     return build_ext_def_seq(root-> first_child, fp_pointer);
 }
-
-int main() {
-    char path[1000];
-    scanf("%s", path);
-    FILE *fp = fopen(path, "r");
-;
-    if(build_program(&fp)) 
-    display_AST(root, 0);
-    else {
-        printf("Error: %s\n", error_message);
-        printf("At row %d col %d", row, col - strlen(token_text) + 1);
-    }
-    return 0;
-}

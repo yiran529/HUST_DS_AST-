@@ -376,6 +376,63 @@ int get_token(FILE** fp_pointer) {
     return kind;
 }
 
+char* get_token_kind(int kind) {
+    switch(kind) {
+        case ERROR_TOKEN: return "ERROR_TOKEN"; 
+        case IDENT:       return "IdentityIDENT";
+        case INT_CONST:   return "INT_CONST"; 
+        case FLOAT_CONST: return "FLOAT_CONST"; 
+        case DOUBLE_CONST:return "DOUBLE_CONST"; 
+        case CHAR_CONST:  return "CHAR_CONST"; 
+        case LONG_CONST:  return "LONG_CONST"; 
+        case STRING_CONST:return "STRING_CONST";
+        case INCLUDE:     return "INCLUDE"; 
+        case STRUCT:      return "STRUCT"; 
+        case TYPEDEF:     return "TYPEDEF";
+        case INT:         return "INT"; 
+        case SHORT:       return "SHORT";
+        case FLOAT:       return "FLOAT";
+        case DOUBLE:      return "DOUBLE";
+        case CHAR:        return "CHAR";
+        case LONG:        return "LONG";
+        case VOID:        return "VOID";
+        case IF:          return "IF";
+        case ELSE:        return "ELSE";
+        case EQ:          return "EQ";
+        case GREATER:     return "GREATER";
+        case LESS:        return "LESS";
+        case GREATEREQ:   return "GREATEREQ";
+        case LESSEQ:      return "LESSEQ";
+        case NOTEQ:       return "NOTEQ";
+        case ASSIGN:      return "ASSIGN";
+        case SEMI:        return "SEMI";
+        case COMMA:       return "COMMA"; 
+        case BREAK:       return "BREAK";
+        case CONTINUE:    return "CONTINUE"; 
+        case RETURN:      return "RETURN";
+        case FOR:         return "FOR";
+        case WHILE:       return "WHILE";
+        case DO:          return "DO";
+        case AND:         return "AND"; 
+        case OR:          return "OR";
+        case PLUS:        return "PLUS";
+        case MINUS:       return "MINUS";
+        case MULTIPLY:    return "MULTIPLY"; 
+        case DEVIDE:      return "DEVIDE";
+        case MOD:         return "MOD";
+        case LP:          return "LP";
+        case RP:          return "RP";
+        case LB:          return "LB";
+        case RB:          return "RB";
+        case LC:          return "LC";
+        case RC:          return "RC";
+        case HASH:        return "HASH";
+        case DOUBLE_SLASH:                  return "DOUBLE_HASH";
+        case START_OF_MULTILINE_COMMENT:    return "START_OF_MULTILINE_COMMENT";
+        case END_OF_MULTILINE_COMMENT:      return "END_OF_MULTILINE_COMMEN";
+        default:  return "ERROR!";
+    }
+}
 // int main() {
 //     char path[1000];
 //     scanf("%s", path);

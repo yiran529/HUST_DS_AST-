@@ -6,17 +6,16 @@ enum AST_NODE_TYPE {
     PROGRAM,
     EXT_DEF_SEQ,
     EXT_VAR_DEF,
-    TYPE_SPECIFIER, //类型限定符
     VAR_SEQ,
     FUNC_DEF,
     NONE_FORMAL_PARAM_SEQ, // 无形参情况下的占位符。避免特殊情况判断及空指针错误                                                            55
     FORMAL_PARAM_SEQ,
     FORMAL_PARAM,
     COMPOUND_STATEMENT,
-    LOCAL_VAR_DEF_SEQ,
+    //LOCAL_VAR_DEF_SEQ,
     LOCAL_VAR_DEF,
     STATEMENT_SEQ,
-    STATEMENT,
+    //STATEMENT,
     CONDITIONAL_STATEMENT,
     EXPRESSION,
     WORD, 
@@ -50,4 +49,6 @@ bool is_operator(int kind);
 char* get_op(TOKEN_KIND kind);
 
 struct AST_NODE** get_child(AST_NODE* node, int x);
+
+bool build_program(FILE** fp_pointer);
 #endif
