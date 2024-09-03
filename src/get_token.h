@@ -58,7 +58,8 @@ enum TOKEN_KIND{
     HASH, //'#'
     DOUBLE_SLASH, // 单行注释的符号
     START_OF_MULTILINE_COMMENT, // namely "/*"
-    END_OF_MULTILINE_COMMENT    // namely "*/"
+    END_OF_MULTILINE_COMMENT,    // namely "*/"
+    COMMA_OR_RP // 要么是逗号要么是右括号，用以处理函数调用中形参的问题
 };
 //还差两个注释符号
 

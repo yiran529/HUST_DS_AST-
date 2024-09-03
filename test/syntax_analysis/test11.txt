@@ -1,0 +1,6 @@
+void fun(int a, int c, long v) {
+    func(v(7));
+    {hello(0*h(),1);}
+    while(max(a, b) <= min(c,a,k *maxx(ddd)))
+    return hello + he();
+}

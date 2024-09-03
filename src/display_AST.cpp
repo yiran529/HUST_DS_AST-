@@ -8,6 +8,7 @@ void display_indent(int indent) {
     for(int i = 1; i <= indent; i++) printf("%s", one_indent);
 }
 
+
 void display_var_def(AST_NODE* cur_node, int indent);
 void display_expression_tree(AST_NODE* cur_node, int indent);
 
@@ -50,13 +51,43 @@ void display_while_loop(AST_NODE* cur_node, int indent) {
     else display_statement_seq((*get_child(cur_node, 2)), indent + 1);
 }
 
-void display_expression_tree(AST_NODE* cur_node, int indent) {
+void display_actual_param(AST_NODE* cur_node, int indent) {
     if(cur_node == NULL) return;
     display_indent(indent);
-    printf("%s\n", cur_node-> word.data);
-    display_expression_tree(cur_node-> first_child, indent + 1);
-    if(cur_node-> first_child)
-    display_expression_tree(cur_node-> first_child-> next_sibling, indent + 1);
+    printf("expression tree: \n");
+    display_expression_tree(cur_node-> first_child-> first_child, indent); // 
+    display_actual_param(*get_child(cur_node, 2), indent); 
+}
+
+void display_function_call(AST_NODE* cur_node, int indent) {
+    display_indent(indent);
+    printf("function call: \n");
+    display_indent(indent + 1);
+    printf("function name: ");
+    printf("%s\n", cur_node-> first_child-> word.data);
+    
+    display_indent(indent + 1);
+    printf("actual parameter: \n");
+    if((*get_child(cur_node, 2))-> first_child) // 有实参
+        display_actual_param(*get_child(cur_node, 2), indent + 2);
+    else { // 没有实参时显示none
+        display_indent(indent + 2);
+        printf("none\n");
+    }
+}
+
+void display_expression_tree(AST_NODE* cur_node, int indent) { //一定要注意第一层调用要从EXPRESSION结点的第一个子节点开始
+    if(cur_node == NULL) return;
+    
+    if(cur_node-> type == WORD){
+        display_indent(indent);
+        printf("%s\n", cur_node-> word.data);
+        display_expression_tree(cur_node-> first_child, indent + 1);
+        if(cur_node-> first_child) // 不能保证第一个孩子一定存在
+            display_expression_tree(cur_node-> first_child-> next_sibling, indent + 1);
+    }
+    else display_function_call(cur_node, indent);
+    
 }
 
 void display_conditional_statement(AST_NODE* cur_node, int indent) {
@@ -106,6 +137,9 @@ void display_statement(AST_NODE* cur_node, int indent) {
                         break;
         case BREAK_STATEMENT: printf("break statement\n"); break;
         case CONTINUE_STATEMENT: printf("continue statement\n"); break;
+        case COMPOUND_STATEMENT: printf("compound statement: \n");
+                                display_statement_seq(cur_node-> first_child, indent + 1);
+                                break;
     }
 }
 

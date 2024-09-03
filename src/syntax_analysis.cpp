@@ -132,13 +132,45 @@ struct AST_NODE** get_child(AST_NODE* node, int x) {
     AST_NODE** cur_node =  &node-> first_child;
     for(int i = 2; i <= x; i++) cur_node = &((*cur_node)-> next_sibling);
     return cur_node; 
-}
+} 
 
 bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym);
 bool build_compound_statement(AST_NODE* &cur_node, FILE** fp_pointer);
 bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer);
 
 /***********************************************************************************************************/
+/**
+ * 以cur_node(引用指针类型)为根构建表示实参序列的AST。左括号已经存储在token_text中。函数正确调用后，右括号会被读取。
+ * cur_node的第一个孩子表示第一个实参（表达式），第二个孩子表示后面的实参序列。
+ * @param cur_node AST根的指针的引用
+ * @param fp_pointer 文件当前读取位置的双重指针
+ * @return 实参序列没有错误，返回true；否则返回false
+ */
+bool build_actual_param(AST_NODE* &cur_node, FILE** fp_pointer){
+    if(cur_kind == RP) return true;
+    assign_AST_node(cur_node, ACTUAL_PARAM_SEQ);
+    
+    last_kind = cur_kind;
+    cur_kind = get_token(fp_pointer);
+    if(cur_kind == RP && last_kind == LP) return true; // 对没有实参的情况进行特判，but bad smell
+    if(build_expression(cur_node-> first_child, fp_pointer, COMMA_OR_RP) == false) return false;
+    return build_actual_param(*get_child(cur_node, 2), fp_pointer);
+}
+
+/**
+ * 以cur_node(引用指针类型)为根构建表示函数调用的AST。左括号已经存储在token_text中。函数正确调用后，右括号会被读取。
+ * cur_node第一个孩子表示函数名，第二个孩子表示实参序列。
+ * @param cur_node AST根的指针的引用
+ * @param fp_pointer 文件当前读取位置的双重指针
+ * @return 函数调用没有错误，返回true；否则返回false
+ */
+bool build_function_call(AST_NODE* &cur_node, FILE** fp_pointer){
+    assign_AST_node(cur_node, FUNCTION_CALL);
+    assign_AST_node(cur_node-> first_child, WORD, IDENT, token_text_copy);
+    last_kind = cur_kind; //用以进行特判
+    return build_actual_param(*get_child(cur_node, 2), fp_pointer);
+}
+
 /**
  * 以cur_node(引用指针类型)为根构建表示for循环的AST。for已经存储在token_text中。函数正确调用后，下一部分的单词会被读取。
  * 其中父节点的第一个孩子为代表for第一条语句的表达式，第二个孩子为代表for第二条语句，第三个孩子代表for第三条语句，第四个
@@ -324,11 +356,13 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
         if(cur_kind == ERROR_TOKEN) {
             strcpy(error_message, "Error token.");
             return false;
-        }
-        if(cur_kind == SEMI && end_sym == SEMI) break;
-        if(cur_kind == IDENT || is_const(cur_kind)) {
+        } else if(cur_kind == LP && last_kind == IDENT) { // 处理函数调用的情况
+            if(build_function_call(opn[opn_index - 1], fp_pointer) == false) return false;
+        } else if(cur_kind == SEMI && end_sym == SEMI) break;
+          else if(cur_kind == COMMA && end_sym == COMMA_OR_RP) break;
+          else if(cur_kind == IDENT || is_const(cur_kind)) {
             if(opn_index > 0 && !is_operator(last_kind)) {
-                strcpy(error_message, "A operand should follow a operator.");
+                strcpy(error_message, "An operand should follow an operator.");
                 return false;
             }
             assign_AST_node(opn[opn_index++], WORD, (TOKEN_KIND)cur_kind, token_text);
@@ -378,7 +412,7 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
                 opn_index--;
                 opn[opn_index - 1] = new_node;
             }
-            if(op_index == 1 && opn_index == 1 && end_sym == RP) {
+            if(op_index == 1 && opn_index == 1 && (end_sym == RP || end_sym == COMMA_OR_RP)) { 
                 cur_node-> first_child = opn[0];
                 return true;
             }
@@ -509,6 +543,9 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
         assign_AST_node(cur_node, CONTINUE_STATEMENT);
         cur_kind = get_token(fp_pointer);
         return true;
+    } else if(cur_kind == LC) {
+        cur_kind = get_token(fp_pointer);
+        return build_compound_statement(cur_node, fp_pointer);
     }
     strcpy(error_message, "Unexpected token here.");
     return false;
