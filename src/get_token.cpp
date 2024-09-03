@@ -6,9 +6,30 @@
 
 extern int cur_kind; // 引用自syntax_analysis.cpp, 用以处理负号与负数的问题
 
-int lines_num;
+int row = 1, col;
 
 char token_text[300];
+
+/**
+ * 实现fgetc的功能的同时记录当前是第几列
+ * @param fp 文件指针
+ * @return 读取到的字符
+ */
+char my_fgetc(FILE* fp) {
+    col++;
+    return fgetc(fp);
+}
+
+/**
+ * 实现my_ungetc的功能的同时记录当前是第几列
+ * @param c 需要回到文件中的字符
+ * @param fp 文件指针
+ * @return 调用ungetc返回的结果
+ */
+int my_ungetc(char c, FILE* fp) {
+    col--;
+    return ungetc(c, fp);
+}
 
 /**
  * 判断一个字符是不是表示数字
@@ -65,10 +86,10 @@ TOKEN_KIND get_keyword(char* token_text) {
  */
 TOKEN_KIND process_float(char* token_text, int index, FILE** fp_pointer) {
     FILE* fp = *fp_pointer;
-    char c = fgetc(fp);
+    char c = my_fgetc(fp);
     do {
         token_text[index++] = c;
-        c = fgetc(fp);
+        c = my_fgetc(fp);
     } while(is_num(c));
     // if(c == 'l' || c == 'L') {
     //     token_text[index++] = c;
@@ -81,7 +102,7 @@ TOKEN_KIND process_float(char* token_text, int index, FILE** fp_pointer) {
         return FLOAT_CONST;
     }
     token_text[index] = '\0';
-    ungetc(c, fp);
+    my_ungetc(c, fp);
     *fp_pointer = fp;
     return DOUBLE_CONST;
 }
@@ -118,39 +139,39 @@ TOKEN_KIND process_number(char* token_text, int index, char c, FILE** fp_pointer
 
     if(c == '0') {
         token_text[index++] = c;
-        c = fgetc(fp);
+        c = my_fgetc(fp);
         if(c == 'x') {
             do {
                 token_text[index++] = c;
-                c = fgetc(fp);
+                c = my_fgetc(fp);
             } while(is_hexadecimal_num(c));
             if(c == 'l' || c == 'L') {// 处理整型常量后面有l或L后缀的情况
                 token_text[index++] = 'c';
                 token_text[index] = '\0';
                 return LONG_CONST;
             }
-            ungetc(c, fp);
+            my_ungetc(c, fp);
             token_text[index] = '\0';
             return INT_CONST;
         } else if(is_octal_num(c)) {
             do {
                 token_text[index++] = c;
-                c = fgetc(fp);
+                c = my_fgetc(fp);
             } while(is_octal_num(c));
             if(c == 'l' || c == 'L') {// 处理整型常量后面有l或L后缀的情况
                 token_text[index++] = c;
                 token_text[index] = '\0';
                 return LONG_CONST;
             }
-            ungetc(c, fp);
+            my_ungetc(c, fp);
             token_text[index] = '\0';
             return INT_CONST;
         } else if(is_num(c)){ // 八进制数表示错误
-            ungetc(c, fp);
+            my_ungetc(c, fp);
             *fp_pointer = fp;
             return ERROR_TOKEN;
         } else { // 单个数字0的情况需要特殊判断
-            ungetc(c, fp);
+            my_ungetc(c, fp);
             *fp_pointer = fp;
             token_text[1] = '\0';
             return INT_CONST;
@@ -159,7 +180,7 @@ TOKEN_KIND process_number(char* token_text, int index, char c, FILE** fp_pointer
 
     do {
         token_text[index++] = c;
-        c = fgetc(fp);
+        c = my_fgetc(fp);
     } while(is_num(c));
 
     if(c == 'l' || c == 'L') {// 处理整型常量后面有l或L后缀的情况
@@ -169,15 +190,15 @@ TOKEN_KIND process_number(char* token_text, int index, char c, FILE** fp_pointer
     }
 
     if(c == '.') { // 处理浮点型常数
-        if(is_num(c = fgetc(fp))) {
-            ungetc(c, fp);
+        if(is_num(c = my_fgetc(fp))) {
+            my_ungetc(c, fp);
             token_text[index++] = '.';
             TOKEN_KIND float_kind = process_float(token_text, index, &fp);
             *fp_pointer = fp;
             return float_kind; 
         } else return ERROR_TOKEN; // 需要考虑3.f类似的情况
     }
-    ungetc(c, fp);
+    my_ungetc(c, fp);
     token_text[index] = '\0';
     *fp_pointer = fp;
     return INT_CONST;
@@ -194,79 +215,81 @@ TOKEN_KIND process_number(char* token_text, int index, char c, FILE** fp_pointer
 int process_others(char c, char* token_text, FILE** fp_pointer) {
     FILE* fp = *fp_pointer;
     switch(c) {
-        case '=': c = fgetc(fp);
+        case '=': c = my_fgetc(fp);
                   if(c == '=') {
                     *fp_pointer = fp; 
                     token_text[1] = '=';
                     token_text[2] = '\0'; 
                     return EQ;
                   }
-                  ungetc(c, fp);
+                  my_ungetc(c, fp);
                   //*fp_pointer = fp; 为什么不能有这句？
                   return ASSIGN; 
-        case '>': c = fgetc(fp);
+        case '>': c = my_fgetc(fp);
                   if(c == '=') {
                     *fp_pointer = fp;
                     token_text[1] = '=';
                     token_text[2] = '\0';
                     return GREATEREQ;
                   }
-                  ungetc(c, fp);
+                  my_ungetc(c, fp);
                   *fp_pointer = fp;
                   return GREATER;
-        case '<': c = fgetc(fp);
+        case '<': c = my_fgetc(fp);
                   if(c == '=') {
                     *fp_pointer = fp;
                     token_text[1] = '=';
                     token_text[2] = '\0';
                     return LESSEQ;
                   }
-                  ungetc(c, fp); 
+                  my_ungetc(c, fp); 
                   *fp_pointer = fp;
                   return LESS;
         case ';': return SEMI;
         case ',': return COMMA;
-        case '&': c = fgetc(fp);
+        case '&': c = my_fgetc(fp);
                   if(c == '&') {
                     *fp_pointer = fp;  
                     token_text[1] = '&';
                     token_text[2] = '\0';
                     return AND;
                   }
-                  // ungetc(c, fp); 既然出现错误，可能就没必要再管文件指针了
+                  // my_ungetc(c, fp); 既然出现错误，可能就没必要再管文件指针了
                   return ERROR_TOKEN; //在本项目中，'&'不可能单独出现
-        case '|': c = fgetc(fp);
+        case '|': c = my_fgetc(fp);
                   if(c == '|') {
                     *fp_pointer = fp;  
                     token_text[1] = '|';
                     token_text[2] = '\0';
                     return OR;
                   }
-                  // ungetc(c, fp); 既然出现错误，可能就没必要再管文件指针了
+                  // my_ungetc(c, fp); 既然出现错误，可能就没必要再管文件指针了
                   return ERROR_TOKEN; //在本项目中，'|'不可能单独出现
         case '+': return PLUS;
         case '-': {
-                    char c = fgetc(fp);
-                    if(cur_kind == SEMI || cur_kind == LP || cur_kind == LC) // 这里的cur_kind是上一个识别完成的单词
+                    char c = my_fgetc(fp);
+                    if(cur_kind == SEMI || cur_kind == LP || cur_kind == LC || cur_kind == EQ
+                    || cur_kind == NOTEQ || cur_kind == GREATER || cur_kind == LESS || cur_kind == GREATEREQ
+                    || cur_kind == LESSEQ || cur_kind == ASSIGN) // 这里的cur_kind是上一个识别完成的单词
                         if(is_num(c)) {
                             TOKEN_KIND kind = process_number(token_text, 1, c, &fp);
                             *fp_pointer = fp;
                             return kind;
                         } else return ERROR_TOKEN;
-                    ungetc(c, fp);
+                    my_ungetc(c, fp);
                     return MINUS;
                   }
-        case '*': c = fgetc(fp);
+        case '*': c = my_fgetc(fp);
                   if(c == '/') {
                     *fp_pointer = fp;  
                     token_text[1] = '/';
                     token_text[2] = '\0';
                     return END_OF_MULTILINE_COMMENT;
                   } 
-                  ungetc(c, fp);
+                  my_ungetc(c, fp);
                   *fp_pointer = fp;
                   return MULTIPLY; 
-        case '/': c = fgetc(fp);
+        case '/': c = my_fgetc(fp);
                   if(c == '/') {
                     *fp_pointer = fp;  
                     token_text[1] = '/';
@@ -278,7 +301,7 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                     token_text[2] = '\0';
                     return START_OF_MULTILINE_COMMENT;
                   }
-                  ungetc(c, fp);
+                  my_ungetc(c, fp);
                   *fp_pointer = fp;
                   return DEVIDE; 
         case '%': return MOD;
@@ -289,25 +312,25 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
         case '{': return LC;
         case '}': return RC;
         case '#': return HASH;
-        case '!': c = fgetc(fp);
+        case '!': c = my_fgetc(fp);
                   if(c == '=') {
                     *fp_pointer = fp;
                     token_text[1] = '=';
                     token_text[2] = '\0';
                     return NOTEQ;
                   }
-                  ungetc(c, fp);
+                  my_ungetc(c, fp);
                   //*fp_pointer = fp;
                   return ERROR_TOKEN; // 暂时不考虑逻辑非
-        case '\'':c = fgetc(fp);
+        case '\'':c = my_fgetc(fp);
                   if(!is_letter(c)) {
-                      ungetc(c, fp);
+                      my_ungetc(c, fp);
                       return ERROR_TOKEN;
                   }
                   token_text[1] = c;
-                  c = fgetc(fp);
+                  c = my_fgetc(fp);
                   if(c != '\'') {
-                      ungetc(c, fp);
+                      my_ungetc(c, fp);
                       return ERROR_TOKEN;
                   }
                   token_text[2] = c;
@@ -325,14 +348,16 @@ int get_token(FILE** fp_pointer) {
     int index = 0;
     FILE* fp = *fp_pointer;
     char c;
-    while((c = fgetc(fp)) == ' ' || c == '\t' || c == '\n') {if(c == '\n') lines_num++;} //过滤掉空白符号和换行
+    while((c = my_fgetc(fp)) == ' ' || c == '\t' || c == '\n') {//过滤掉空白符号和换行
+        if(c == '\n') row++, col = 0;
+    } 
 
     if(is_letter(c)) {
         do {
             token_text[index++] = c;
-            c = fgetc(fp);
+            c = my_fgetc(fp);
         } while(is_num(c) || is_letter(c));
-        ungetc(c, fp);
+        my_ungetc(c, fp);
         token_text[index] = '\0';
         *fp_pointer = fp;
         return get_keyword(token_text);
@@ -359,6 +384,6 @@ int get_token(FILE** fp_pointer) {
 //     while((get_token_res = get_token(&fp)) != EOF) {
 //         printf("%d %s\n", get_token_res, token_text);
 //     }
-//     printf("%d", lines_num);
+//     printf("%d", row);
 //     return 0;
 // }

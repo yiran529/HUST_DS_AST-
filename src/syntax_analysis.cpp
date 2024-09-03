@@ -4,6 +4,8 @@
 
 extern char token_text[300];
 
+extern int col, row;
+
 char token_text_copy[300];
 
 char error_message[300]; // 用以存储报错信息
@@ -148,7 +150,7 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer);
 bool build_for_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
     cur_kind = get_token(fp_pointer);
     if(cur_kind != LP) {
-        strcpy(error_message, "'for' should be followed by ')'.");
+        strcpy(error_message, "\"for\" should be followed by '('.");
         return false;
     }
 
@@ -186,7 +188,10 @@ bool build_for_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
  * @return while循环没有错误，返回true；否则返回false
  */
 bool build_while_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
-    if(cur_kind != LP) return false;
+    if(cur_kind != LP) {
+        strcpy(error_message, "\"while\" should be followed by '('.");
+        return false;
+    }
     assign_AST_node(cur_node, WHILE_LOOP);
 
     cur_kind = get_token(fp_pointer);
@@ -228,7 +233,10 @@ bool build_conditional_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
     assign_AST_node(cur_node, CONDITIONAL_STATEMENT);
 
     cur_kind = get_token(fp_pointer);
-    if(cur_kind != LP) return false;
+    if(cur_kind != LP) {
+        strcpy(error_message, "\"if\" should be followed by '('.");
+        return false;
+    }
     cur_kind = get_token(fp_pointer);
     if(build_expression(cur_node-> first_child, fp_pointer, RP) == false) return false;
 
@@ -304,6 +312,7 @@ void assign_op_num() {
 bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym) {
     assign_op_num();
     assign_AST_node(cur_node, EXPRESSION);
+    if(cur_kind == SEMI) return true; // 空语句的情况特殊判断
     int       op[300]; 
     AST_NODE* opn[300]; 
     opn[0] = NULL; // 解决空语句的问题
@@ -312,23 +321,41 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
 
 
     while(1) {
-        if(cur_kind == ERROR_TOKEN) return false;
+        if(cur_kind == ERROR_TOKEN) {
+            strcpy(error_message, "Error token.");
+            return false;
+        }
         if(cur_kind == SEMI && end_sym == SEMI) break;
         if(cur_kind == IDENT || is_const(cur_kind)) {
-            if(opn_index > 0 && !is_operator(last_kind))  return false;
+            if(opn_index > 0 && !is_operator(last_kind)) {
+                strcpy(error_message, "A operand should follow a operator.");
+                return false;
+            }
             assign_AST_node(opn[opn_index++], WORD, (TOKEN_KIND)cur_kind, token_text);
         } else if(is_operator(cur_kind)) {
             if(cur_kind == ASSIGN) { // 赋值符号情况特殊，需要特别判断
-                if(last_kind != IDENT) return false;
+                if(last_kind != IDENT) {
+                    strcpy(error_message, "Wrong usage of '='.");
+                    return false;
+                }
             }
-            if(cur_kind != LP && last_kind != IDENT && !is_const(last_kind) && last_kind != RP) return false;
-            if(cur_kind == LP && !is_operator(last_kind) && (op_index + opn_index > 1)) return false;
+            if(cur_kind != LP && last_kind != IDENT && !is_const(last_kind) && last_kind != RP) {
+                strcpy(error_message, "Operand should be followed by operator.");
+                return false;
+            }
+            if(cur_kind == LP && !is_operator(last_kind) && (op_index + opn_index > 1)) {
+                strcpy(error_message, "Wrong usage of '('.");
+                return false;
+            }
             switch(op_cmp[op_num[cur_kind]][op_num[op[op_index - 1]]]) {
                 case 1: //大于
                         op[op_index++] = cur_kind;  
                         break;
                 case 0: //小于
-                        if(cur_kind == ASSIGN) return false;
+                        if(cur_kind == ASSIGN) {
+                            strcpy(error_message, "Wrong usage of '='.");
+                            return false;
+                        }
                         while(op_cmp[op_num[cur_kind]][op_num[op[op_index - 1]]] == 0 && op_index > 1) {
                             AST_NODE* new_node; 
                             assign_AST_node(new_node, WORD, (TOKEN_KIND)op[op_index - 1], get_op((TOKEN_KIND)op[op_index - 1]));
@@ -355,12 +382,22 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
                 cur_node-> first_child = opn[0];
                 return true;
             }
-            else if(op_index == 1) return false;
+            else if(op_index == 1) {
+                strcpy(error_message, "Unexpected ')' here.");
+                return false;
+            }
             op_index--; // 将左括号出栈
-        } else return false;
+        } else {
+            strcpy(error_message, "Unexpiiected token here.");
+            return false;
+        }
         last_kind = cur_kind;
         strcpy(token_text_copy, token_text);
         cur_kind = get_token(fp_pointer);
+    }
+    if(opn_index < op_index) { // 结尾多了一个运算符，或括号没有闭合
+        strcpy(error_message, "Unexpected token here."); 
+        return false;
     }
     //最后将剩下的进行计算, 只针对结尾是分号的情况
     while(op_index > 1 && op[op_index - 1] != LP) {
@@ -372,7 +409,10 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
         opn_index--;
         opn[opn_index - 1] = new_node;
     }
-    if(op[op_index - 1] == LP) return false;
+    if(op[op_index - 1] == LP) {
+        strcpy(error_message, "'(' not closed.");
+        return false;
+    }
     cur_node-> first_child = opn[0]; 
     return true;
 }
@@ -388,12 +428,18 @@ bool build_var_list(AST_NODE* &cur_node, FILE** fp_pointer) {
     assign_AST_node(cur_node, VAR_SEQ);
 
     if(cur_kind == SEMI) {
-        if(last_kind != IDENT) return false; // 保证分号前面是标识符
+        if(last_kind != IDENT) {// 保证分号前面是标识符
+            strcpy(error_message, "Wrong definition of the variables.");
+            return false; 
+        }
         free(cur_node), cur_node = NULL;
         cur_kind = get_token(fp_pointer);
         return true;
     } else if(cur_kind == COMMA) {
-        if(last_kind != IDENT) return false; // 保证逗号前面是标识符
+        if(last_kind != IDENT) {// 保证逗号前面是标识符
+            strcpy(error_message, "Wrong definition of the variables");
+            return false; 
+        }
         last_kind = cur_kind;
         cur_kind = get_token(fp_pointer);
         return build_var_list(cur_node, fp_pointer);
@@ -402,7 +448,10 @@ bool build_var_list(AST_NODE* &cur_node, FILE** fp_pointer) {
         last_kind = cur_kind;
         cur_kind = get_token(fp_pointer);
         return build_var_list(cur_node-> first_child-> next_sibling, fp_pointer);
-    } else return false;
+    } else {
+        strcpy(error_message, "Wrong definition of the variables.");
+        return false;
+    }
 }
 
 
@@ -416,16 +465,19 @@ bool build_var_list(AST_NODE* &cur_node, FILE** fp_pointer) {
  * @return 如果语句没有错，返回true; 否则返回false
  */
 bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
-    if(cur_kind == ERROR_TOKEN || cur_kind == EOF) return false;
-    else if(is_type_specifier(cur_kind)) { // 是局部变量定义
+    if(cur_kind == ERROR_TOKEN || cur_kind == EOF) {
+        if(cur_kind == ERROR_TOKEN) strcpy(error_message, "Error token.");
+        else strcpy(error_message, "Expected '}' here.");
+        return false;
+    } else if(is_type_specifier(cur_kind)) { // 是局部变量定义
         assign_AST_node(cur_node, LOCAL_VAR_DEF);
         assign_AST_node(cur_node-> first_child, WORD, (TOKEN_KIND)cur_kind, token_text);
         cur_kind = get_token(fp_pointer);
         return build_var_list(cur_node-> first_child-> next_sibling, fp_pointer);
     } else if(cur_kind == IDENT || is_const(cur_kind) || cur_kind == LP || cur_kind == SEMI) { // 是表达式(可以只含一个分号)
-        bool ret = build_expression(cur_node, fp_pointer, SEMI);
+        if(build_expression(cur_node, fp_pointer, SEMI) == false) return false;
         cur_kind = get_token(fp_pointer);
-        return ret;
+        return true;
     } else if(cur_kind == IF) {
         return build_conditional_statement(cur_node, fp_pointer);
     } else if(cur_kind == RETURN) {
@@ -441,17 +493,24 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
         return true;
     } else if(cur_kind == BREAK) {
         cur_kind = get_token(fp_pointer);
-        if(cur_kind != SEMI) return false;
+        if(cur_kind != SEMI) {
+            strcpy(error_message, "\"break\" should be followed by ';'.");
+            return false;
+        }
         assign_AST_node(cur_node, BREAK_STATEMENT);
         cur_kind = get_token(fp_pointer);
         return true;
     } else if(cur_kind == CONTINUE) {
         cur_kind = get_token(fp_pointer);
-        if(cur_kind != SEMI) return false;
+        if(cur_kind != SEMI) {
+            strcpy(error_message, "\"continue\" should be followed by ';'.");
+            return false;
+        }
         assign_AST_node(cur_node, CONTINUE_STATEMENT);
         cur_kind = get_token(fp_pointer);
         return true;
     }
+    strcpy(error_message, "Unexpected token here.");
     return false;
 }
 
@@ -483,7 +542,10 @@ bool build_statement_seq(AST_NODE* &cur_node, FILE** fp_pointer) {
 bool build_compound_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
     assign_AST_node(cur_node, COMPOUND_STATEMENT);
     
-    if(cur_kind == RC) return false; // 处理复合语句完全为空的情况
+    if(cur_kind == RC) { // 处理复合语句完全为空的情况
+        strcpy(error_message, "Compound statement should not be empty.");
+        return false; 
+    }
 
     if(build_statement_seq(cur_node-> first_child, fp_pointer) == false) return false;
     //前面的build_statement_seq的调用保证了本函数的post-condition会被满足
@@ -505,18 +567,27 @@ bool build_formal_param_seq(AST_NODE* &cur_node, FILE** fp_pointer) {
         return true;
     }
 
-    if(!is_type_specifier(cur_kind)) return false;
+    if(!is_type_specifier(cur_kind)) {
+        strcpy(error_message, "Expected a type specifier here.");
+        return false;
+    }
     assign_AST_node(cur_node, FORMAL_PARAM_SEQ);
     assign_AST_node(cur_node-> first_child, FORMAL_PARAM);
     assign_AST_node(cur_node-> first_child-> first_child, WORD, (TOKEN_KIND)cur_kind, token_text);
 
     cur_kind = get_token(fp_pointer);
-    if(cur_kind != IDENT) return false;
+    if(cur_kind != IDENT) {
+        strcpy(error_message, "Expected an identity here.");
+        return false;
+    }
     assign_AST_node(cur_node-> first_child-> first_child-> next_sibling, WORD, (TOKEN_KIND)cur_kind, token_text);
 
     cur_kind = get_token(fp_pointer);
     if(cur_kind == RP) return true;
-    else if(cur_kind != COMMA) return false;
+    else if(cur_kind != COMMA) {
+        strcpy(error_message, "Expected comma here.");
+        return false;
+    }
 
     return build_formal_param_seq(cur_node-> first_child-> next_sibling, fp_pointer);
 }
@@ -532,14 +603,16 @@ bool build_fun_def(AST_NODE* cur_node, FILE** fp_pointer) {
     assign_AST_node(cur_node-> first_child-> next_sibling, WORD, IDENT, token_text_copy);
     if(build_formal_param_seq(cur_node-> first_child-> next_sibling-> next_sibling, fp_pointer) == false) return false;
     cur_kind = get_token(fp_pointer);
-    if(cur_kind == SEMI) {
+    if(cur_kind == SEMI) { // 函数声明
         cur_kind = get_token(fp_pointer);
         return true; 
-    } else if (cur_kind == LC) {
+    } else if (cur_kind == LC) { // 函数定义
         cur_kind = get_token(fp_pointer);
         return build_compound_statement(cur_node-> first_child-> next_sibling-> next_sibling-> next_sibling, fp_pointer);
-    } else return false;
-    //return ...;
+    } else {
+        strcpy(error_message, "Unexpected token here.");
+        return false;
+    }
 }
 
 
@@ -573,12 +646,15 @@ bool build_ext_def(AST_NODE* &cur_node, FILE** fp_pointer) {
     if(is_type_specifier(cur_kind) || cur_kind == VOID) // 特殊判断函数返回值为空的情况
         assign_AST_node(cur_node-> first_child, WORD, (TOKEN_KIND)cur_kind, token_text);
     else {
-        printf("%d\n", cur_kind);
+        strcpy(error_message, "Expected type specifier here.");
         return false;
     }
 
     cur_kind = get_token(fp_pointer);
-    if(cur_kind != IDENT) return false;
+    if(cur_kind != IDENT) {
+        strcpy(error_message, "Expected identity here.");
+        return false;
+    }
     strcpy(token_text_copy, token_text);
     last_kind = cur_kind;
 
@@ -587,7 +663,10 @@ bool build_ext_def(AST_NODE* &cur_node, FILE** fp_pointer) {
         cur_node-> type = (AST_NODE_TYPE)FUNC_DEF;
         return build_fun_def(cur_node, fp_pointer);
     } else {
-        if(type == VOID) return false; // 变量定义类型不能为void，这个情况需要特殊判断
+        if(type == VOID) { // 变量定义类型不能为void，这个情况需要特殊判断
+            strcpy(error_message, "The type of variables cannot be \"void\".");
+            return false; 
+        }
         cur_node-> type = (AST_NODE_TYPE)EXT_VAR_DEF;
         return build_var_def(cur_node-> first_child-> next_sibling, fp_pointer);
     }
@@ -619,7 +698,11 @@ bool build_ext_def_seq(AST_NODE* &cur_node, FILE** fp_pointer) {
  */
 bool build_program(FILE** fp_pointer) {
     cur_kind = get_token(fp_pointer);
-    if(cur_kind == ERROR_TOKEN || cur_kind == EOF) return false;
+    if(cur_kind == ERROR_TOKEN || cur_kind == EOF) {
+        if(cur_kind == ERROR_TOKEN) strcpy(error_message, "Error token.");
+        else                        strcpy(error_message, "The file is empty");
+        return false;
+    }
     assign_AST_node(root, PROGRAM);
     //*AST = root;
     return build_ext_def_seq(root-> first_child, fp_pointer);
@@ -632,6 +715,9 @@ int main() {
 ;
     if(build_program(&fp)) 
     display_AST(root, 0);
-    else  printf("ERROR!");
+    else {
+        printf("Error: %s\n", error_message);
+        printf("At row %d col %d", row, col - strlen(token_text) + 1);
+    }
     return 0;
 }

@@ -1,0 +1,13 @@
+int fun() {
+while(a > 1) {
+	a+1;}
+}
+int fun2(short lele) {
+	while(a + b == c) {
+		if(c *9 - 1!= 10) 
+		 a +1;
+	}
+	while(1) ;
+	while(a && bbb) return abc;
+	while(1) 1;
+}

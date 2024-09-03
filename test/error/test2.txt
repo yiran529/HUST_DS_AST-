@@ -1,0 +1,3 @@
+int a, b,d;
+char 1c;
+double eea, hello, java;

@@ -1,0 +1,3 @@
+float a, k;
+int func(int a, char b, int a)
+char func2();

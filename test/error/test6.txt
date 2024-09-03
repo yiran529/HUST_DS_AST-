@@ -1,0 +1,20 @@
+int func() {
+    if(a > 1) { 
+        b == a;
+        a > (3 - 1);
+        if(a > 2)
+            1 + 1;
+        else {
+            a + b + c;
+        }
+    }
+    else if(iamstupid == false) {
+        a;
+    }
+    else if(iamsmart == true) {
+        (1)*a;
+    }
+    else first && second;
+    int a;
+    return hellojavascript + python / chash;
+}
