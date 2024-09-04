@@ -16,12 +16,14 @@ int main()
     printf("Enter 0 to exit.\n");
     printf("Please Enter the path of the target file:\n");
     char path[1000];
-    scanf("%s", path);
+    //scanf("%s", path);
+    FILE *fp = fopen("E:\\DS_hw\\AST\\test\\syntax_analysis\\test6.txt", "r");
     while(1){
         printf("Which operation you want to perform: \n");
         char c; 
-        FILE *fp = fopen(path, "r");
-        getchar();scanf("%c", &c);
+        rewind(fp); // 让文件指针回到开头  
+        //scanf("%c", &c);getchar();
+        c = '3';
         switch(c){
             case '1': 
                 printf("Here is the result of token analysis: \n");
@@ -38,14 +40,27 @@ int main()
                     printf("Error: %s\n", error_message);
                     printf("At row %d col %d", row, col - strlen(token_text) + 1);
                 } 
+                break;
             case '3':
                 printf("Enter the path to which you want to put the standard source file: \n");
                 char src_path[300];
-                scanf("%s", src_path);
-                FILE *src_fp = fopen(path, "r");
-                generate(root, src_fp, 0);
+                //scanf("%s", src_path);
+                FILE *src_fp = fopen("E:\\DS_hw\\AST\\test\\syntax_analysis\\test12.txt", "w+");
+                //fflush(src_fp);
+                //fprintf(src_fp, "     \n");
+                fflush(src_fp);
+                if(build_program(&fp)) 
+                    generate(root, src_fp, 0), fflush(src_fp);
+                else {
+                    printf("Error: %s\n", error_message);
+                    printf("At row %d   col %d", row, col - strlen(token_text) + 1);
+                } 
+                fclose(src_fp);
+                break;    
         }
-
+        if(c == '0') break;
+        break;
     }
+    fclose(fp);
     return 0;
 }

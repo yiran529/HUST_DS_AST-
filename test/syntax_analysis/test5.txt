@@ -13,6 +13,6 @@ int func(int a) {
     a = b = c =d;
     a = c > 100l;
     c + ( ooo = 10.1f) + 1;
-    1 = c;
-    A + BBB = ll;
+    a1 = c;
+    A + BBB == ll;
 }

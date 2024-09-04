@@ -13,8 +13,7 @@ int func() {
     }
     else if(iamsmart == true) {
         (1)*a;
-    }
-    else first && second;
+    } else first && second;
     int a;
     return hellojavascript + python / chash;
 }
