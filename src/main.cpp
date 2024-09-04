@@ -17,7 +17,7 @@ int main()
     printf("Please Enter the path of the target file:\n");
     char path[1000];
     //scanf("%s", path);
-    FILE *fp = fopen("E:\\DS_hw\\AST\\test\\syntax_analysis\\test6.txt", "r");
+    FILE *fp = fopen("E:\\DS_hw\\AST\\test\\syntax_analysis\\test11.txt", "r");
     while(1){
         printf("Which operation you want to perform: \n");
         char c; 

@@ -256,7 +256,7 @@ bool build_return_statement(AST_NODE*& cur_node, FILE** fp_pointer) {
 /**
  * 创建一个AST结点表示条件语句（if已经被读取）。若该函数被正确调用，下一部分的第一个单词也会被读取。
  * 表示条件语句的第一个子节点代表表示条件的表达式，第二个子节点代表表示子句的表达式，第三个子节点
- * （如果存在）表示else后面的条件语句或复合语句或语句序列。
+ * （如果存在）表示else后面的复合语句或语句序列(可以是条件语句或其它语句）。
  * @param cur_node AST根的指针的引用
  * @param fp_pointer 文件当前读取位置的双重指针
  * @return 条件语句没有错误，返回true；否则返回false

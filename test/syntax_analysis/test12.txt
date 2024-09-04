@@ -1,28 +1,9 @@
-int func()
+void fun(int a,int c,long v)
 {
-    if(a>1)
+    func(v(7));
     {
-        b==a;
-        a>(3-1);
-        if(a>2)
-            1+1;
-        else
-        {
-            a+(b+c);
-        }
+        hello(0*h(),1);
     }
-    else
-        if(iamstupid==false)
-        {
-            a;
-        }
-        else
-            if(iamsmart==true)
-            {
-                1*a;
-            }
-            else
-                first&&second;
-    int a;
-    return hellojavascript+(python/chash);
+    while(max(a,b)<=min(c,a,k*maxx(ddd)))
+        return hello+he();
 }

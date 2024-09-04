@@ -6,6 +6,6 @@ void hello(int a, char c, short s199) {
         continue;
     } 
     while(true){
-        -1 + -2;
+        -1 + 2;
     }
 }
