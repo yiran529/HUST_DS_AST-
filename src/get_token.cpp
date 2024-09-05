@@ -6,7 +6,7 @@
 
 extern int cur_kind; // 引用自syntax_analysis.cpp, 用以处理负号与负数的问题
 
-int row = 1, col;
+int row = 1, col; // 记录文件指针当前在文件的第几行第几列
 
 char token_text[300];
 
@@ -170,6 +170,10 @@ TOKEN_KIND process_number(char* token_text, int index, char c, FILE** fp_pointer
             my_ungetc(c, fp);
             *fp_pointer = fp;
             return ERROR_TOKEN;
+        } else if(c == '.') { // 小数
+            my_ungetc(c, fp);
+            index--;
+            c = '0';
         } else { // 单个数字0的情况需要特殊判断
             my_ungetc(c, fp);
             *fp_pointer = fp;
@@ -231,7 +235,7 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                     token_text[1] = '=';
                     token_text[2] = '\0';
                     return GREATEREQ;
-                  }
+                  } 
                   my_ungetc(c, fp);
                   *fp_pointer = fp;
                   return GREATER;
@@ -241,6 +245,16 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                     token_text[1] = '=';
                     token_text[2] = '\0';
                     return LESSEQ;
+                  } else if(is_letter(c) || is_num(c)) { //是包含的文件。由于文件命名规则复杂，现将其简化
+                    int index = 1;
+                    while(is_letter(c) || is_num(c) || c == '.'){
+                        token_text[index++] = c;
+                        c = my_fgetc(fp);
+                    }
+                    token_text[index++] = c;
+                    token_text[index] = '\0';
+                    if(c == '>') return FILE_NAME;
+                    else return ERROR_TOKEN;
                   }
                   my_ungetc(c, fp); 
                   *fp_pointer = fp;
@@ -279,27 +293,40 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                     my_ungetc(c, fp);
                     return MINUS;
                   }
-        case '*': c = my_fgetc(fp);
-                  if(c == '/') {
-                    *fp_pointer = fp;  
-                    token_text[1] = '/';
-                    token_text[2] = '\0';
-                    return END_OF_MULTILINE_COMMENT;
-                  } 
-                  my_ungetc(c, fp);
-                  *fp_pointer = fp;
-                  return MULTIPLY; 
+        case '*': return MULTIPLY; 
         case '/': c = my_fgetc(fp);
                   if(c == '/') {
                     *fp_pointer = fp;  
                     token_text[1] = '/';
-                    token_text[2] = '\0';
-                    return DOUBLE_SLASH;
+                    int index = 2;
+                    while((c = my_fgetc(fp)) != '\n' && c != EOF) // 注意文件结束也可能让行注释结束
+                        token_text[index++] = c;
+                    token_text[index] = '\0';
+                    *fp_pointer = fp;
+                    return LINE_COMMENT; // 单行注释
                   } else if(c == '*') {
                     *fp_pointer = fp;  
                     token_text[1] = '*';
-                    token_text[2] = '\0';
-                    return START_OF_MULTILINE_COMMENT;
+                    int index = 2;
+                    while(1) {
+                        c = my_fgetc(fp);
+                        token_text[index++] = c;
+                        if(c == '\n') row++;
+                        if(c =='*') {
+                            c = my_fgetc(fp);
+                            if(c == '/') {
+                                token_text[index++] = '/';
+                                token_text[index] = '\0';
+                                *fp_pointer = fp;
+                                return BLOCK_COMMENT; // 块注释
+                            } else my_ungetc(c, fp);
+                        }
+                        else if(c == EOF) {
+                            token_text[index] = '\0';
+                            return ERROR_TOKEN;
+                        }
+                    } 
+                    return ERROR_TOKEN;
                   }
                   my_ungetc(c, fp);
                   *fp_pointer = fp;
@@ -311,7 +338,6 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
         case ']': return RB;
         case '{': return LC;
         case '}': return RC;
-        case '#': return HASH;
         case '!': c = my_fgetc(fp);
                   if(c == '=') {
                     *fp_pointer = fp;
@@ -337,13 +363,43 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                   token_text[3] = '\0';
                   *fp_pointer = fp;
                   return CHAR_CONST;
+        case '.': {
+                    c = my_fgetc(fp); // 处理类似.124的情况
+                    if(!is_num(c)) return ERROR_TOKEN;
+                    my_ungetc(c, fp);
+                    my_ungetc('.', fp);
+                    c = '0';
+                    TOKEN_KIND kind = process_number(token_text, 0, c, &fp);
+                    *fp_pointer = fp;
+                    return kind;
+                  }
+        case '#': {
+                    c = my_fgetc(fp);
+                    if(c == 'd' && (c = my_fgetc(fp)) == 'e' && (c = my_fgetc(fp)) == 'f' &&
+                    (c = my_fgetc(fp)) == 'i' && (c = my_fgetc(fp)) == 'n' && (c = my_fgetc(fp)) == 'e' &&
+                    (c = my_fgetc(fp)) == ' ') { // #define之后必须是空格
+                        my_ungetc(c, fp);
+                        strcpy(token_text, "#define");
+                        return MACRO_DEFINE;
+                    } else if(c == 'i' && (c = my_fgetc(fp)) == 'n' && (c = my_fgetc(fp)) == 'c' &&
+                    (c = my_fgetc(fp)) == 'l' && (c = my_fgetc(fp)) == 'u' && (c = my_fgetc(fp)) == 'd' &&
+                    (c = my_fgetc(fp)) == 'e') {
+                        strcpy(token_text, "#include");
+                        return FILE_INCLUDE;
+                    }
+                    return ERROR_TOKEN;
+                  }
         default:  if(feof(fp)) return EOF;
                   return ERROR_TOKEN;
     }
 }
 
-
-int get_token(FILE** fp_pointer) {
+/**
+ * 读取*fp_pointer所指向的源文件的下一个单词(包括注释)
+ * @param fp_pointer 指向源文件当前读取位置的双重指针
+ * @return 识别出的单词的种类码
+ */
+int get_all_token(FILE** fp_pointer) {
     
     int index = 0;
     FILE* fp = *fp_pointer;
@@ -369,6 +425,7 @@ int get_token(FILE** fp_pointer) {
         return kind;
     }
 
+
     token_text[0] = c;
     token_text[1] = '\0';
     int kind = process_others(c, token_text, &fp);
@@ -379,7 +436,7 @@ int get_token(FILE** fp_pointer) {
 char* get_token_kind(int kind) {
     switch(kind) {
         case ERROR_TOKEN: return "ERROR_TOKEN"; 
-        case IDENT:       return "IdentityIDENT";
+        case IDENT:       return "IDENT";
         case INT_CONST:   return "INT_CONST"; 
         case FLOAT_CONST: return "FLOAT_CONST"; 
         case DOUBLE_CONST:return "DOUBLE_CONST"; 
@@ -426,21 +483,23 @@ char* get_token_kind(int kind) {
         case RB:          return "RB";
         case LC:          return "LC";
         case RC:          return "RC";
-        case HASH:        return "HASH";
-        case DOUBLE_SLASH:                  return "DOUBLE_HASH";
-        case START_OF_MULTILINE_COMMENT:    return "START_OF_MULTILINE_COMMENT";
-        case END_OF_MULTILINE_COMMENT:      return "END_OF_MULTILINE_COMMEN";
+        case MACRO_DEFINE:return "MACRO_DEFINE";
+        case FILE_INCLUDE:return "FILE_INCLUDE";
+        case FILE_NAME:   return "FIME_NAME";
+        case LINE_COMMENT:return "LINE_COMMENT";
+        case BLOCK_COMMENT:return "BLOCK_COMMENT";
         default:  return "ERROR!";
     }
 }
-// int main() {
-//     char path[1000];
-//     scanf("%s", path);
-//     FILE *fp = fopen(path, "r");
-//     int get_token_res;
-//     while((get_token_res = get_token(&fp)) != EOF) {
-//         printf("%d %s\n", get_token_res, token_text);
-//     }
-//     printf("%d", row);
-//     return 0;
-// }
+
+/**
+ * 读取*fp_pointer所指向的源文件的下一个单词(不包括注释)
+ * @param fp_pointer 指向源文件当前读取位置的双重指针
+ * @return 识别出的单词的种类码
+ */
+int get_token(FILE** fp_pointer) {
+    int kind = get_all_token(fp_pointer);
+    while(kind == LINE_COMMENT || kind == BLOCK_COMMENT) 
+        kind = get_all_token(fp_pointer);
+    return kind;
+}

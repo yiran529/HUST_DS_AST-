@@ -26,6 +26,8 @@ enum AST_NODE_TYPE {
     BREAK_STATEMENT,
     CONTINUE_STATEMENT,
     FUNCTION_CALL,
+    MACRO_DEFINE_STATEMENT,
+    FILE_INCLUDE_STATEMENT, // #include<...>
     UNKNOWN // 未知类型（即没有确定）
 };
 

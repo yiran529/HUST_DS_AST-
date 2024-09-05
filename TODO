@@ -1,16 +1,17 @@
 1. expression没有实现赋值 DONE!
 2. 注释没有实现 
-3. .f等问题
+3. .f等问题 DONE!
 4. void!! 只能是函数的类型  DONE!
 5. 报错信息 DONE!
 6. 特判 + -1 DONE!
 7. 没有switch case
-8. if-else AST的表示有点奇怪
+8. if-else AST的表示有点奇怪 SKIP
 9. 函数调用 DONE!
-10. for后面第一条语句没有实现能初始化变量的操作
+10. for后面第一条语句没有实现能初始化变量的操作 SKIP
 11. 不能判断复合语句里完全没有东西的情况  DONE!
 12. 没有实现数组
 13. break continue 没有在syntax中   DONE!
 14.1-2有问题    DONE!
-15. 特色？
+15. 特色？ 
 16. 单纯的复合语句 DONE!
+17. 预编译

@@ -1,7 +1,6 @@
 #include<string.h>
 #include "syntax_analysis.h"
 #include "display_AST.h"
-
 extern char token_text[300];
 
 extern int col, row;
@@ -315,6 +314,7 @@ int op_cmp[200][200] = {
 // 0 表示小于
 
 int op_num[100]; // 给每个可能在表达式中出现的表示运算的单词编号，便于表达式分析
+
 /**
  * 给op_num初始化，索引为表达式中可能出现的表示运算符的单词，值为其对应的编号
  */
@@ -547,7 +547,7 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
     } else if(cur_kind == LC) {
         cur_kind = get_token(fp_pointer);
         return build_compound_statement(cur_node, fp_pointer);
-    }
+    } 
     strcpy(error_message, "Unexpected token here.");
     return false;
 }
@@ -675,6 +675,7 @@ bool build_var_def(AST_NODE* &cur_node, FILE** fp_pointer) {
 
 /**
  * 以cur_node（引用指针类型）为根构建表示外部定义的AST。该定义序列的第一个单词已经被正确地读取。
+ * 函数被正确调用后，下一部分第一个单词也会被读取。
  * @param cur_node AST根的指针的引用
  * @param fp_pointer 文件当前读取位置的双重指针
  * @return 外部定义没有错误，返回true；否则返回false
@@ -685,6 +686,24 @@ bool build_ext_def(AST_NODE* &cur_node, FILE** fp_pointer) {
     int type = cur_kind;
     if(is_type_specifier(cur_kind) || cur_kind == VOID) // 特殊判断函数返回值为空的情况
         assign_AST_node(cur_node-> first_child, WORD, (TOKEN_KIND)cur_kind, token_text);
+    else if(cur_kind == MACRO_DEFINE) {
+        cur_kind = get_token(fp_pointer);
+        if(cur_kind == IDENT) {
+            assign_AST_node(cur_node, MACRO_DEFINE_STATEMENT);
+            assign_AST_node(cur_node-> first_child, WORD, IDENT, token_text); 
+            cur_kind = get_token(fp_pointer);
+            return true;
+        } else return false;
+    } 
+    else if(cur_kind == FILE_INCLUDE) {
+        cur_kind = get_token(fp_pointer);
+        if(cur_kind == FILE_NAME) {
+            assign_AST_node(cur_node, FILE_INCLUDE_STATEMENT);
+            assign_AST_node(cur_node-> first_child, WORD, FILE_NAME, token_text); 
+            cur_kind = get_token(fp_pointer);
+            return true;
+        } else return false;
+    }
     else {
         strcpy(error_message, "Expected type specifier here.");
         return false;

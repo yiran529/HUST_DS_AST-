@@ -55,21 +55,29 @@ enum TOKEN_KIND{
     RB, //']'
     LC, //'{'
     RC, //'}'
-    HASH, //'#'
-    DOUBLE_SLASH, // 单行注释的符号
-    START_OF_MULTILINE_COMMENT, // namely "/*"
-    END_OF_MULTILINE_COMMENT,    // namely "*/"
+    HASH,
+    MACRO_DEFINE, // #define
+    FILE_INCLUDE, // #include
+    FILE_NAME, // <....>
+    LINE_COMMENT, // 单行注释
+    BLOCK_COMMENT, // 多行注释
     COMMA_OR_RP // 要么是逗号要么是右括号，用以处理函数调用中形参的问题
 };
 //还差两个注释符号
 
 /**
- * 读取*fp_pointer所指向的源文件的下一个单词
+ * 读取*fp_pointer所指向的源文件的下一个单词(不包括注释)
  * @param fp_pointer 指向源文件当前读取位置的双重指针
  * @return 识别出的单词的种类码
  */
 int get_token(FILE** fp_pointer);
 
+/**
+ * 读取*fp_pointer所指向的源文件的下一个单词(包括注释)
+ * @param fp_pointer 指向源文件当前读取位置的双重指针
+ * @return 识别出的单词的种类码
+ */
+int get_all_token(FILE** fp_pointer);
 /**
  * 根据给定的单词编号返回对应的单词种类的字符串表示
  * @param kind 单词编号

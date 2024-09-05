@@ -139,8 +139,9 @@ void generate(AST_NODE* cur_node, FILE* fp, int indent) {
         fprintf(fp, "%s", (*get_child(cur_node, 2))-> word.data);
         fprintf(fp, "(");
         generate(*get_child(cur_node, 3), fp, indent);
-        fprintf(fp, ")\n");
+        fprintf(fp, ")");
         if(*get_child(cur_node, 4)) {
+            fprintf(fp, "\n");
             display_indent(indent, fp);
             generate(*get_child(cur_node, 4), fp, indent + 1);
         } else fprintf(fp, ";");
@@ -183,6 +184,12 @@ void generate(AST_NODE* cur_node, FILE* fp, int indent) {
         generate(*get_child(cur_node, 3), fp, 0);
         fprintf(fp, ")\n");
         generate((*get_child(cur_node, 4)), fp, indent + 1);
+    } else if(cur_node-> type == MACRO_DEFINE_STATEMENT) {
+        fprintf(fp, "#define ");
+        fprintf(fp, "%s\n", cur_node-> first_child-> word.data);
+    } else if(cur_node-> type == FILE_INCLUDE_STATEMENT) {
+        fprintf(fp, "#include ");
+        fprintf(fp, "%s\n", cur_node-> first_child-> word.data);
     }
     else if(cur_node-> type == EXT_DEF_SEQ) {
         generate(cur_node-> first_child, fp, indent);

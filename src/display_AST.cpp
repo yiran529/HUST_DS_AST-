@@ -237,5 +237,16 @@ void display_AST(AST_NODE* cur_node, int indent) {
         case FUNC_DEF:    display_indent(indent);
                           printf("Function definition: \n");
                           display_func_def(cur_node, indent + 1);
+                          break;
+        case MACRO_DEFINE_STATEMENT:
+                          display_indent(indent);
+                          printf("Macro definition: ");
+                          printf("%s\n", cur_node-> first_child-> word.data);
+                          break;
+        case FILE_INCLUDE_STATEMENT:
+                          display_indent(indent);
+                          printf("Included file: ");
+                          printf("%s\n", cur_node-> first_child-> word.data);
+                          break;
     }
 }

@@ -1,0 +1,6 @@
+int hhh(int a, short v, long doubl) {
+    (hu);
+}
+#define HELLO123
+int a;
+int mian(int notmian);
