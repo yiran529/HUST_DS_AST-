@@ -8,7 +8,6 @@ void display_indent(int indent) {
     for(int i = 1; i <= indent; i++) printf("%s", one_indent);
 }
 
-
 void display_var_def(AST_NODE* cur_node, int indent);
 void display_expression_tree(AST_NODE* cur_node, int indent);
 
@@ -64,7 +63,7 @@ void display_function_call(AST_NODE* cur_node, int indent) {
     printf("function call: \n");
     display_indent(indent + 1);
     printf("function name: ");
-    printf("%s\n", cur_node-> first_child-> word.data);
+    printf("%s\n", cur_node-> first_child-> word-> data);
     
     display_indent(indent + 1);
     printf("actual parameter: \n");
@@ -81,7 +80,16 @@ void display_expression_tree(AST_NODE* cur_node, int indent) { //一定要注意
     
     if(cur_node-> type == WORD){
         display_indent(indent);
-        printf("%s\n", cur_node-> word.data);
+        printf("%s\n", cur_node-> word-> data);
+        if(cur_node-> word-> array_info != NULL) {
+            display_indent(indent);
+            printf("[\n");
+            display_indent(indent + 1);
+            printf("expresssion tree: \n");
+            display_expression_tree(cur_node-> word-> array_info-> first_child, indent + 1);
+            display_indent(indent);
+            printf("]\n");
+        }
         display_expression_tree(cur_node-> first_child, indent + 1);
         if(cur_node-> first_child) // 不能保证第一个孩子一定存在
             display_expression_tree(cur_node-> first_child-> next_sibling, indent + 1);
@@ -140,6 +148,15 @@ void display_statement(AST_NODE* cur_node, int indent) {
         case COMPOUND_STATEMENT: printf("compound statement: \n");
                                 display_statement_seq(cur_node-> first_child, indent + 1);
                                 break;
+        case DO_WHILE_LOOP:
+                        printf("do-while loop\n");
+                        display_indent(indent + 1);
+                        printf("sub-statement:\n");
+                        display_statement(*get_child(cur_node, 1), indent + 2);
+                        display_indent(indent + 1);
+                        printf("condition: \n");
+                        display_statement(*get_child(cur_node, 2), indent + 2);
+                        break;
     }
 }
 
@@ -157,6 +174,7 @@ void display_type(TOKEN_KIND kind) {
         case LONG:   printf("long");  break;
         case FLOAT:  printf("float"); break;
         case DOUBLE: printf("double");break;
+        case STRING: printf("string");break;
         case VOID:   printf("void");  break;
     }
 }
@@ -166,10 +184,10 @@ void display_formal_param_seq(AST_NODE* cur_node, int indent) {
     
     display_indent(indent);
     printf("type: ");
-    display_type((TOKEN_KIND)cur_node-> first_child-> first_child-> word.kind);
+    display_type((TOKEN_KIND)cur_node-> first_child-> first_child-> word-> kind);
     printf("  ");
     printf("name: ");
-    printf("%s", cur_node-> first_child-> first_child-> next_sibling-> word.data);
+    printf("%s", cur_node-> first_child-> first_child-> next_sibling-> word-> data);
     printf("\n");
     display_formal_param_seq(cur_node-> first_child-> next_sibling, indent);
 }
@@ -177,12 +195,12 @@ void display_formal_param_seq(AST_NODE* cur_node, int indent) {
 void display_func_def(AST_NODE* cur_node, int indent) {
     display_indent(indent);
     printf("type: ");
-    display_type((TOKEN_KIND)cur_node-> first_child-> word.kind);
+    display_type((TOKEN_KIND)cur_node-> first_child-> word-> kind);
     printf("\n");
 
     display_indent(indent);
     printf("function name: ");
-    printf("%s\n", cur_node-> first_child-> next_sibling-> word.data);
+    printf("%s\n", cur_node-> first_child-> next_sibling-> word-> data);
 
     display_indent(indent);
     printf("Formal parametre: \n");
@@ -204,14 +222,14 @@ void display_var_list(AST_NODE* cur_node, int indent) {
     if(cur_node == NULL) return;
     display_indent(indent);
     printf("ID:  ");
-    printf("%s\n", cur_node-> first_child-> word.data);
+    printf("%s\n", cur_node-> first_child-> word-> data);
     display_var_list(cur_node-> first_child-> next_sibling, indent);
 }
 
 void display_var_def(AST_NODE* cur_node, int indent) {
     display_indent(indent);
     printf("type: ");
-    display_type((TOKEN_KIND)cur_node-> first_child-> word.kind);
+    display_type((TOKEN_KIND)cur_node-> first_child-> word-> kind);
     printf("\n");
 
     display_indent(indent);
@@ -241,12 +259,12 @@ void display_AST(AST_NODE* cur_node, int indent) {
         case MACRO_DEFINE_STATEMENT:
                           display_indent(indent);
                           printf("Macro definition: ");
-                          printf("%s\n", cur_node-> first_child-> word.data);
+                          printf("%s\n", cur_node-> first_child-> word-> data);
                           break;
         case FILE_INCLUDE_STATEMENT:
                           display_indent(indent);
                           printf("Included file: ");
-                          printf("%s\n", cur_node-> first_child-> word.data);
+                          printf("%s\n", cur_node-> first_child-> word-> data);
                           break;
     }
 }

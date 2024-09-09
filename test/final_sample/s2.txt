@@ -1,0 +1,58 @@
+#define OK 1
+#include<stdio.h>
+void swap(int,int);
+int main()
+{
+     int a=1;
+     const short b=2;
+     signed int c,i;
+     float g=3.2;
+     int s[20];
+     extern double f; auto int x_x; long y;static char q;unsigned int d;
+     c=a+1;typedef int zheng;c=a-1;c=a*1; c=a/1;  c=a%1;
+
+     if(a==1)
+     swap(a,c);//use function:swap
+     else
+     printf("YES");
+
+    for(i=0;i<2;i++)
+      s[i]=i;
+printf("%s",s);
+
+    do{
+        c=i;
+        i--;
+        if(a>1||c>=1&&c!=0)
+         printf("%c%d%x%X%o%f",'a','a','a','a','a',g);
+        else if(c<=0)
+         continue;
+        else
+         break;
+     }while(i>0);
+
+     switch(i)
+     {
+        case 1:
+          c=1;
+          break;
+        case 2:
+          c=2;
+    break;
+        default:
+          c=3;
+     }
+   a=123L; a=0123;
+a=0x123;a=0X123;a=123u;a=123U;y=123L;y=123l;y=123UL;y=123uL;a=-123;y=-123L;a=-0123;a=-0x123;a=-0X123;
+     return 0;
+}
+
+void swap(int a,int c)
+{
+    int b;
+    b=a; a=c;c=b;
+    goto STATUS;
+    STATUS:
+    printf("a=%d\a\b\f\n\t\v\\\?c=%d",a,c);
+             printf("%c%c",'\123','\x5f');
+}

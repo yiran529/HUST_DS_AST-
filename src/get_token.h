@@ -24,6 +24,7 @@ enum TOKEN_KIND{
     DOUBLE, 
     CHAR, 
     LONG, 
+    STRING,
     VOID,
     IF, 
     ELSE, 
@@ -84,5 +85,9 @@ int get_all_token(FILE** fp_pointer);
  * @return 对应的单词种类字符串表示
  */
 char* get_token_kind(int kind);
+
+char my_fgetc(FILE* fp);
+
+int my_ungetc(char c, FILE* fp);
 
 #endif

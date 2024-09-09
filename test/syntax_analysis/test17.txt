@@ -1,0 +1,19 @@
+int a[10];
+void f()
+{
+    int a;
+    while((8*(-11))==(1110-lll))
+    {while(true)for(;;){
+                for(i=1;i<=100;i=(i+1))return 1000;
+                if(((i*iuyh)+(100+(a[hust(ed[0], uuu[0x11] *0)]=199)))&&(6!=0)){
+                    if(thisistrue(0-hh()))
+                        999;
+                }
+                1-(2.00*((-077777l)*10.001f));0x666+0333;
+            }
+    }
+}
+#define MMM
+#include <iostream>
+double lll,
+eee;

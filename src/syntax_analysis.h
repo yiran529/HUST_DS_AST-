@@ -28,16 +28,18 @@ enum AST_NODE_TYPE {
     FUNCTION_CALL,
     MACRO_DEFINE_STATEMENT,
     FILE_INCLUDE_STATEMENT, // #include<...>
+    DO_WHILE_LOOP,
     UNKNOWN // 未知类型（即没有确定）
 };
 
 typedef struct WORD_INFO{
     int kind;
     char* data;
+    struct AST_NODE* array_info; // 如果该标识符是数组，这里将存储数组方括号内的内容
 }WORD_INFO;
 typedef struct AST_NODE{ // 采用孩子兄弟法存储多叉树
     AST_NODE_TYPE type;
-    WORD_INFO word;
+    WORD_INFO* word;
     struct AST_NODE* next_sibling;
     struct AST_NODE* first_child;
 }AST_NODE;

@@ -1,0 +1,8 @@
+void fun(char c) {
+    do {
+        while(1)
+         for(;;) {
+            hello;
+         }
+    } while(7*9*iii);
+}

@@ -30,10 +30,10 @@ void generate_conditional_statement(AST_NODE* cur_node, FILE* fp, int indent, bo
             display_indent(indent, fp);
             fprintf(fp, "else ");
             generate_conditional_statement((*get_child(cur_node, 3))-> first_child, fp, indent, true);
-        } else {
+        } else { // else后只是单纯的复合语句或单个语句
             display_indent(indent, fp);
             fprintf(fp, "else\n");
-            generate(*get_child(cur_node, 3), fp, indent);
+            generate(*get_child(cur_node, 3), fp, indent + 1);
         }
     }
 }
@@ -50,27 +50,34 @@ void generate(AST_NODE* cur_node, FILE* fp, int indent) {
     else if(cur_node-> type == WORD) {
         if(cur_node-> first_child) { // 是表达式
             bool paren_flag = true; // 需不需要括号
-            if(cur_node-> first_child-> word.kind == IDENT || 
-            is_const(cur_node-> first_child-> word.kind) && 
-            cur_node-> first_child-> word.data[0] != '-' ||
-            cur_node-> first_child-> type == FUNCTION_CALL) //是负数
+            if(cur_node-> first_child-> type == FUNCTION_CALL ||
+            cur_node-> first_child-> word-> kind == IDENT || 
+            is_const(cur_node-> first_child-> word-> kind) && 
+            cur_node-> first_child-> word-> data[0] != '-') //是负数
                 paren_flag = false;
             if(paren_flag) fprintf(fp, "(");
             generate(cur_node-> first_child, fp, 0);
             if(paren_flag) fprintf(fp, ")");
 
             paren_flag = true;
-            if((*get_child(cur_node, 2))-> word.kind == IDENT || 
-            is_const((*get_child(cur_node, 2))-> word.kind) && 
-            (*get_child(cur_node, 2))-> word.data[0] != '-' ||
-            (*get_child(cur_node, 2))-> type == FUNCTION_CALL) //是负数
+            if((*get_child(cur_node, 2))-> type == FUNCTION_CALL ||
+            (*get_child(cur_node, 2))-> word-> kind == IDENT || 
+            is_const((*get_child(cur_node, 2))-> word-> kind) && 
+            (*get_child(cur_node, 2))-> word-> data[0] != '-' ) //是负数
                 paren_flag = false;
-            fprintf(fp, "%s", cur_node-> word.data);
+            fprintf(fp, "%s", cur_node-> word-> data);
             if(paren_flag) fprintf(fp, "(");
             generate(*get_child(cur_node, 2), fp, 0);
             if(paren_flag) fprintf(fp, ")");
         } 
-        else fprintf(fp, "%s", cur_node-> word.data);
+        else {
+            fprintf(fp, "%s", cur_node-> word-> data);
+            if(cur_node-> word-> array_info != NULL) { //不是单纯的标识符，而是数组
+                fprintf(fp, "[");
+                generate(cur_node-> word-> array_info, fp, 0);
+                fprintf(fp, "]");
+            }
+        }
     }
     else if(cur_node-> type == ACTUAL_PARAM_SEQ) {
         if(cur_node-> first_child == NULL) return; // 实参序列为空
@@ -81,7 +88,7 @@ void generate(AST_NODE* cur_node, FILE* fp, int indent) {
         }
     }
     else if(cur_node-> type == FUNCTION_CALL) {
-        fprintf(fp, "%s", cur_node-> first_child-> word.data);
+        fprintf(fp, "%s", cur_node-> first_child-> word-> data);
         fprintf(fp, "(");
         generate(*get_child(cur_node, 2), fp, 0);
         fprintf(fp, ")");
@@ -120,13 +127,13 @@ void generate(AST_NODE* cur_node, FILE* fp, int indent) {
     }
     else if(cur_node-> type == EXT_VAR_DEF || cur_node-> type == LOCAL_VAR_DEF) {
         if(cur_node-> type == LOCAL_VAR_DEF) display_indent(indent, fp);
-        fprintf(fp, "%s", cur_node-> first_child-> word.data);
+        fprintf(fp, "%s", cur_node-> first_child-> word-> data);
         fprintf(fp, " ");
         generate(*get_child(cur_node, 2), fp, indent + 1);
         fprintf(fp, ";\n");
     }
     else if(cur_node-> type == VAR_SEQ) {
-        fprintf(fp, "%s", cur_node-> first_child-> word.data);
+        fprintf(fp, "%s", cur_node-> first_child-> word-> data);
         if(*get_child(cur_node, 2)) {
             fprintf(fp, ",");
             generate(*get_child(cur_node, 2), fp, 0);
@@ -134,9 +141,9 @@ void generate(AST_NODE* cur_node, FILE* fp, int indent) {
     }
     else if(cur_node-> type == FUNC_DEF) {
         display_indent(indent, fp);
-        fprintf(fp, "%s", cur_node-> first_child-> word.data);
+        fprintf(fp, "%s", cur_node-> first_child-> word-> data);
         fprintf(fp, " ");
-        fprintf(fp, "%s", (*get_child(cur_node, 2))-> word.data);
+        fprintf(fp, "%s", (*get_child(cur_node, 2))-> word-> data);
         fprintf(fp, "(");
         generate(*get_child(cur_node, 3), fp, indent);
         fprintf(fp, ")");
@@ -186,14 +193,22 @@ void generate(AST_NODE* cur_node, FILE* fp, int indent) {
         generate((*get_child(cur_node, 4)), fp, indent + 1);
     } else if(cur_node-> type == MACRO_DEFINE_STATEMENT) {
         fprintf(fp, "#define ");
-        fprintf(fp, "%s\n", cur_node-> first_child-> word.data);
+        fprintf(fp, "%s\n", cur_node-> first_child-> word-> data);
     } else if(cur_node-> type == FILE_INCLUDE_STATEMENT) {
         fprintf(fp, "#include ");
-        fprintf(fp, "%s\n", cur_node-> first_child-> word.data);
+        fprintf(fp, "%s\n", cur_node-> first_child-> word-> data);
     }
     else if(cur_node-> type == EXT_DEF_SEQ) {
         generate(cur_node-> first_child, fp, indent);
         generate(*get_child(cur_node, 2), fp, indent);
+    } else if(cur_node-> type == DO_WHILE_LOOP) {
+        display_indent(indent, fp);
+        fprintf(fp, "do\n");
+        generate(*get_child(cur_node, 1), fp, indent + 1);
+        display_indent(indent, fp);
+        fprintf(fp, "while(");
+        generate(*get_child(cur_node, 2), fp, 0);
+        fprintf(fp, ");\n");
     }
 }// || cur_node-> type == FOR_LOOP || cur_node-> type == CONDITIONAL_STATEMENT
 

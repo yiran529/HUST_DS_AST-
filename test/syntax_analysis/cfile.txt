@@ -1,0 +1,4 @@
+string func(string hi)
+{
+    return "hello world";
+}

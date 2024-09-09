@@ -13,7 +13,8 @@ AST_NODE* root;
 
 AST_NODE** AST;
 
-int cur_kind, last_kind; // 当前以及上一次读到的单词的种类编号
+int cur_kind, last_kind = -2; // 当前以及上一次读到的单词的种类编号
+int kind_seq[1000], kind_seq_num; // 记录历史所有单词的种类
 
 /**
  * 判断一个种类编号是不是类型关键字
@@ -26,7 +27,8 @@ bool is_type_specifier(int kind) { //判断是不是类型关键字
            kind == LONG  ||
            kind == CHAR  ||
            kind == FLOAT ||
-           kind == DOUBLE;
+           kind == DOUBLE||
+           kind == STRING;
 }
 
 /**
@@ -40,7 +42,8 @@ bool is_const(int kind) { //判断是不是类型关键字
            kind == LONG_CONST  ||
            kind == CHAR_CONST  ||
            kind == FLOAT_CONST ||
-           kind == DOUBLE_CONST;
+           kind == DOUBLE_CONST||
+           kind == STRING_CONST;
            //kind == STRING_CONST; 暂不考虑
 }
 
@@ -66,6 +69,39 @@ bool is_operator(int kind) { //判断是不是类型关键字
            kind == ASSIGN    ||
            kind == NOTEQ;
            //还没有考虑赋值
+}
+
+/**
+ * 撤回一次get_token操作，使得当前文件指针指向上一次读到的单词的上一个字符,
+ * cur_token变为上上次读到的单词的种类编号
+ * @param fp_pointer 双重文件指针
+ */
+void un_get_token(FILE** fp_pointer) {
+    cur_kind = last_kind;
+    if(kind_seq_num >= 3)
+        last_kind = kind_seq[kind_seq_num - 3];
+    else last_kind = -2;
+    kind_seq_num--;
+    for(int i = strlen(token_text) - 1; i >= 0; i--) {
+        my_ungetc(token_text[i], *fp_pointer);
+    }
+    strcpy(token_text, token_text_copy);
+}
+
+/**
+ * 读取*fp_pointer所指向的源文件的下一个单词(不包括注释),同时将上一次
+ * get_token调用的结果存储在last_kind以及token_test_copy中
+ * @param fp_pointer 指向源文件当前读取位置的双重指针
+ * @return 识别出的单词的种类码
+ */
+int get_token(FILE** fp_pointer) {
+    last_kind = cur_kind;
+    strcpy(token_text_copy, token_text);
+    int kind = get_all_token(fp_pointer);
+    while(kind == LINE_COMMENT || kind == BLOCK_COMMENT) 
+        kind = get_all_token(fp_pointer);
+    kind_seq[kind_seq_num++] = kind;
+    return kind;
 }
 
 /**
@@ -104,9 +140,11 @@ char* get_op(TOKEN_KIND kind) {
 void assign_AST_node(AST_NODE* &node, AST_NODE_TYPE type, TOKEN_KIND kind, char* token_text0) {
     node = (AST_NODE*)malloc(sizeof(AST_NODE));
     node-> type = type;
-    node-> word.kind = kind;
-    node-> word.data = (char*)malloc(sizeof(char) * (strlen(token_text0) + 1));
-    strcpy(node-> word.data, token_text0);
+    node-> word = (WORD_INFO*)malloc(sizeof(WORD_INFO));
+    node-> word-> kind = kind;
+    node-> word-> data = (char*)malloc(sizeof(char) * (strlen(token_text0) + 1));
+    strcpy(node-> word-> data, token_text0);
+    node-> word-> array_info = NULL;
     node-> first_child = node-> next_sibling = NULL;
 }
 
@@ -119,6 +157,7 @@ void assign_AST_node(AST_NODE* &node, AST_NODE_TYPE type) {
     node = (AST_NODE*)malloc(sizeof(AST_NODE));
     node-> type = type;
     node-> first_child = node-> next_sibling = NULL;
+    node-> word = NULL;
 }
 
 /**
@@ -149,7 +188,7 @@ bool build_actual_param(AST_NODE* &cur_node, FILE** fp_pointer){
     if(cur_kind == RP) return true;
     assign_AST_node(cur_node, ACTUAL_PARAM_SEQ);
     
-    last_kind = cur_kind;
+    //last_kind = cur_kind;
     cur_kind = get_token(fp_pointer);
     if(cur_kind == RP && last_kind == LP) return true; // 对没有实参的情况进行特判，but bad smell
     if(build_expression(cur_node-> first_child, fp_pointer, COMMA_OR_RP) == false) return false;
@@ -166,8 +205,43 @@ bool build_actual_param(AST_NODE* &cur_node, FILE** fp_pointer){
 bool build_function_call(AST_NODE* &cur_node, FILE** fp_pointer){
     assign_AST_node(cur_node, FUNCTION_CALL);
     assign_AST_node(cur_node-> first_child, WORD, IDENT, token_text_copy);
-    last_kind = cur_kind; //用以进行特判
+    //last_kind = cur_kind; //用以进行特判
     return build_actual_param(*get_child(cur_node, 2), fp_pointer);
+}
+
+/**
+ * 以cur_node(引用指针类型)为根构建表示do-while循环的AST, "do"已经被读取。
+ * cur_node的第一个孩子是表示子句的复合语句，第二个孩子是表示while条件的expression。
+ * 如果语句正确，下一部分的第一个单词将被读取。
+ * @param cur_node AST根的指针的引用
+ * @param fp_pointer 文件当前读取位置的双重指针
+ * @return for循环没有错误，返回true；否则返回false
+ */
+bool build_do_while_loop(AST_NODE* &cur_node, FILE** fp_pointer){
+    assign_AST_node(cur_node, DO_WHILE_LOOP);
+    if((cur_kind = get_token(fp_pointer)) != LC) {
+        strcpy(error_message, "Expected '{' here.");
+        return false;
+    }
+    cur_kind = get_token(fp_pointer);
+    if(build_compound_statement(cur_node-> first_child, fp_pointer) == false) return false;
+    if(cur_kind != WHILE) {
+        strcpy(error_message, "Unexpected token here");
+        return false;
+    }
+    cur_kind = get_token(fp_pointer);
+    if(cur_kind != LP) {
+        strcpy(error_message, "Expected '(' here.");
+        return false;
+    }
+    cur_kind = get_token(fp_pointer);
+    if(build_expression(*get_child(cur_node, 2), fp_pointer, RP) == false) return false;
+    if((cur_kind = get_token(fp_pointer)) != SEMI) {
+        strcpy(error_message, "Expected ';' here.");
+        return false;
+    }
+    cur_kind = get_token(fp_pointer);
+    return true;
 }
 
 /**
@@ -351,14 +425,14 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
     int op_index = 0, opn_index = 0;
     op[op_index++] = HASH; // 用-1表示栈底元素
 
-
     while(1) {
         if(cur_kind == ERROR_TOKEN) {
             strcpy(error_message, "Error token.");
             return false;
         } else if(cur_kind == LP && last_kind == IDENT) { // 处理函数调用的情况
             if(build_function_call(opn[opn_index - 1], fp_pointer) == false) return false;
-        } else if(cur_kind == SEMI && end_sym == SEMI) break;
+        } else if(cur_kind == SEMI  && end_sym == SEMI)        break;
+          else if(cur_kind == RB    && end_sym == RB)          break;
           else if(cur_kind == COMMA && end_sym == COMMA_OR_RP) break;
           else if(cur_kind == IDENT || is_const(cur_kind)) {
             if(opn_index > 0 && !is_operator(last_kind)) {
@@ -366,6 +440,19 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
                 return false;
             }
             assign_AST_node(opn[opn_index++], WORD, (TOKEN_KIND)cur_kind, token_text);
+            
+            //下面处理表达式中的数组
+            AST_NODE* index_expression_node = NULL;
+            char c = my_fgetc(*fp_pointer);  
+            if(c != '[') my_ungetc(c, *fp_pointer);
+            else {  
+                my_ungetc(c, *fp_pointer);
+                cur_kind = get_token(fp_pointer);
+                cur_kind = get_token(fp_pointer);
+                if(build_expression(index_expression_node, fp_pointer, RB) == false) return false;
+                cur_kind = IDENT; // 将整个数组视为一个IDENT，便于后续处理
+            }
+            opn[opn_index - 1]-> word-> array_info = index_expression_node;
         } else if(is_operator(cur_kind)) {
             if(cur_kind == ASSIGN) { // 赋值符号情况特殊，需要特别判断
                 if(last_kind != IDENT) {
@@ -382,9 +469,6 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
                 return false;
             }
             switch(op_cmp[op_num[cur_kind]][op_num[op[op_index - 1]]]) {
-                case 1: //大于
-                        op[op_index++] = cur_kind;  
-                        break;
                 case 0: //小于
                         if(cur_kind == ASSIGN) {
                             strcpy(error_message, "Wrong usage of '='.");
@@ -400,6 +484,9 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
                             opn[opn_index - 1] = new_node;
                         }
                         op[op_index++] = cur_kind;
+                        break;                
+                case 1: //大于
+                        op[op_index++] = cur_kind;  
                         break;
             }
         } else if(cur_kind == RP) {
@@ -425,8 +512,8 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
             strcpy(error_message, "Unexpected token here.");
             return false;
         }
-        last_kind = cur_kind;
-        strcpy(token_text_copy, token_text);
+        //last_kind = cur_kind;
+        //strcpy(token_text_copy, token_text);
         cur_kind = get_token(fp_pointer);
     }
     if(opn_index < op_index) { // 结尾多了一个运算符，或括号没有闭合
@@ -453,7 +540,8 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
 }
 
 /**
- * 以cur_node(引用指针类型)为根构建表示变量序列的AST。该定义序列的第一个单词（标识符）已经存储在token_text中。
+ * 以cur_node(引用指针类型)为根构建表示变量序列(在变量定义时出现)的AST。
+ * 该定义序列的第一个标识符已经存储在token_text中。
  * 函数调用后，下一部分的第一个单词也会被读取。
  * @param cur_node AST根的指针的引用
  * @param fp_pointer 文件当前读取位置的双重指针
@@ -475,12 +563,34 @@ bool build_var_list(AST_NODE* &cur_node, FILE** fp_pointer) {
             strcpy(error_message, "Wrong definition of the variables");
             return false; 
         }
-        last_kind = cur_kind;
+        //last_kind = cur_kind;
         cur_kind = get_token(fp_pointer);
         return build_var_list(cur_node, fp_pointer);
     } else if(cur_kind == IDENT) {
-        assign_AST_node(cur_node->first_child, WORD, IDENT, token_text);
-        last_kind = cur_kind;
+        assign_AST_node(cur_node-> first_child, WORD, IDENT, token_text);
+
+        char c = my_fgetc(*fp_pointer);//特判数组问题
+        if(c != '[') my_ungetc(c, *fp_pointer); //若是数组，标识符与[]之间不能有空格
+        else {
+            cur_kind = get_token(fp_pointer);
+            if(cur_kind != INT_CONST) {
+                strcpy(error_message, "Expected const integer here.");
+                return false;
+            }
+            char ele_num[50];
+            strcpy(ele_num, token_text);
+            cur_kind = get_token(fp_pointer);
+            if(cur_kind != RB) {
+                strcpy(error_message, "Expected ']' here");
+                return false;
+            }
+            char array_info[50];
+            strcpy(array_info, "["), strcat(array_info, ele_num), strcat(array_info, "]");
+            strcat(cur_node->first_child-> word-> data, array_info);
+            cur_kind = IDENT; // 整个数组定义符号都视为IDENT，便于其它操作处理
+        }
+
+        //last_kind = cur_kind;
         cur_kind = get_token(fp_pointer);
         return build_var_list(cur_node-> first_child-> next_sibling, fp_pointer);
     } else {
@@ -493,7 +603,7 @@ bool build_var_list(AST_NODE* &cur_node, FILE** fp_pointer) {
 /*************************************************************************************************************/
 /**
  * 建立以cur_node为根的代表语句的AST（第一个单词已经读在token_text中）。如果该函数被正确调用，
- * 那么下一部分的第一个单词(一般来说，是分号后面一个单词）也会被读取。
+ * 那么下一部分的第一个单词(分号或大括号后面一个单词）也会被读取。
  * 另外，注意这里的“语句”对原来的进行了一定拓展。
  * @param cur_node 表示语句的AST的根的指针引用
  * @param fp_pointer 文件当前读取位置的双重指针
@@ -547,7 +657,9 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
     } else if(cur_kind == LC) {
         cur_kind = get_token(fp_pointer);
         return build_compound_statement(cur_node, fp_pointer);
-    } 
+    } else if(cur_kind == DO) { 
+        return build_do_while_loop(cur_node, fp_pointer);
+    }
     strcpy(error_message, "Unexpected token here.");
     return false;
 }
@@ -561,7 +673,7 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
  */
 bool build_statement_seq(AST_NODE* &cur_node, FILE** fp_pointer) {
     if(cur_kind == RC) {
-        last_kind = cur_kind;
+        //last_kind = cur_kind;
         cur_kind = get_token(fp_pointer);
         return true;
     }
@@ -586,7 +698,7 @@ bool build_compound_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
         return false; 
     }
 
-    last_kind = LC; 
+    //last_kind = LC; 
     if(build_statement_seq(cur_node-> first_child, fp_pointer) == false) return false;
     //前面的build_statement_seq的调用保证了本函数的post-condition会被满足
     return true;
@@ -600,7 +712,7 @@ bool build_compound_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
  * @return 如果形参序列没有错，返回true; 否则返回false
  */
 bool build_formal_param_seq(AST_NODE* &cur_node, FILE** fp_pointer) {
-    last_kind = cur_kind;
+    //last_kind = cur_kind;
     cur_kind = get_token(fp_pointer);
     if(last_kind == LP && cur_kind == RP) { //没有形参的情况需要特殊判断
         assign_AST_node(cur_node, NONE_FORMAL_PARAM_SEQ);
@@ -657,20 +769,17 @@ bool build_fun_def(AST_NODE* cur_node, FILE** fp_pointer) {
 
 
 
-/**
- * 以cur_node(引用指针类型)为根构建表示变量定义的AST。该定义序列的第一个单词（标识符）已经存储
- * 在token_text_copy中, 第二个单词存储在token_text中 。
- * @param cur_node AST根的指针的引用
- * @param fp_pointer 文件当前读取位置的双重指针
- * @return 外部变量定义没有错误，返回true；否则返回false
- */
-bool build_var_def(AST_NODE* &cur_node, FILE** fp_pointer) {
-    assign_AST_node(cur_node, VAR_SEQ);
-
-    assign_AST_node(cur_node-> first_child, WORD, IDENT, token_text_copy);
-    // 这里不需要get_token（根据specification）
-    return build_var_list(cur_node-> first_child-> next_sibling, fp_pointer);
-}
+// /**
+//  * 以cur_node(引用指针类型)为根构建表示变量定义的AST。该定义序列的第一个单词（标识符）已经存储
+//  * 在token_tex存储在token_text中 。
+//  * @param cur_node AST根的指针的引用
+//  * @param fp_pointer 文件当前读取位置的双重指针
+//  * @return 外部变量定义没有错误，返回true；否则返回false
+//  */
+// bool build_var_def(AST_NODE* &cur_node, FILE** fp_pointer) {
+//     assign_AST_node(cur_node, VAR_SEQ);
+//     return build_var_list(cur_node-> first_child, fp_pointer);
+// }
 
 
 /**
@@ -714,9 +823,9 @@ bool build_ext_def(AST_NODE* &cur_node, FILE** fp_pointer) {
         strcpy(error_message, "Expected identity here.");
         return false;
     }
-    strcpy(token_text_copy, token_text);
-    last_kind = cur_kind;
 
+    //strcpy(token_text_copy, token_text);
+    //last_kind = cur_kind;
     cur_kind = get_token(fp_pointer);
     if(cur_kind == LP) {
         cur_node-> type = (AST_NODE_TYPE)FUNC_DEF;
@@ -726,8 +835,9 @@ bool build_ext_def(AST_NODE* &cur_node, FILE** fp_pointer) {
             strcpy(error_message, "The type of variables cannot be \"void\".");
             return false; 
         }
+        un_get_token(fp_pointer); // 为了满足bulid_var_def的specification
         cur_node-> type = (AST_NODE_TYPE)EXT_VAR_DEF;
-        return build_var_def(cur_node-> first_child-> next_sibling, fp_pointer);
+        return build_var_list(*(get_child(cur_node, 2)), fp_pointer);
     }
 }
 

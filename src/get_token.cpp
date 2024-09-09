@@ -50,6 +50,16 @@ bool is_letter(char c) {
 }
 
 /**
+ * 判断一个字符如果在其前面加上反斜杠是不是一个合法的转义字符（不包括数字表示形式）
+ * @param c 需要判断的字符
+ * @return true, 如果是合法的；否则false
+ */
+bool is_escape_character(char c) {
+    return c == 'a' || c == 'b' || c == 'f' || c == 'n'
+    || c == 'r' || c == 't' || c == 't' || c == 'v'
+    || c == '\''|| c == '\\'|| c == '?' || c == '0';
+}
+/**
  * 判断一个字符串是关键字还是标识符；若是关键字，是哪个关键字
  * @param token_text 待判断的字符串（要求必须是标识符或关键字）
  * @return 该字符串对应的种类码
@@ -73,6 +83,7 @@ TOKEN_KIND get_keyword(char* token_text) {
     if(!strcmp(token_text, "include"))  return INCLUDE;
     if(!strcmp(token_text, "struct"))   return STRUCT;
     if(!strcmp(token_text, "typedef"))  return TYPEDEF;
+    if(!strcmp(token_text, "string"))  return STRING;
     return IDENT; 
     //TODO;//自身值怎么处理
 }
@@ -245,7 +256,7 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                     token_text[1] = '=';
                     token_text[2] = '\0';
                     return LESSEQ;
-                  } else if(is_letter(c) || is_num(c)) { //是包含的文件。由于文件命名规则复杂，现将其简化
+                  } else if(is_letter(c) || is_num(c)) { //"可能"是包含的文件。由于文件命名规则复杂，现将其简化
                     int index = 1;
                     while(is_letter(c) || is_num(c) || c == '.'){
                         token_text[index++] = c;
@@ -254,7 +265,13 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                     token_text[index++] = c;
                     token_text[index] = '\0';
                     if(c == '>') return FILE_NAME;
-                    else return ERROR_TOKEN;
+                    else {
+                        while(index) my_ungetc(token_text[--index], fp);
+                        c = my_fgetc(fp);
+                        token_text[0] = c;
+                        token_text[1] = '\0';
+                        return LESS;
+                    }
                   }
                   my_ungetc(c, fp); 
                   *fp_pointer = fp;
@@ -301,6 +318,7 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                     int index = 2;
                     while((c = my_fgetc(fp)) != '\n' && c != EOF) // 注意文件结束也可能让行注释结束
                         token_text[index++] = c;
+                    row++;
                     token_text[index] = '\0';
                     *fp_pointer = fp;
                     return LINE_COMMENT; // 单行注释
@@ -348,21 +366,54 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                   my_ungetc(c, fp);
                   //*fp_pointer = fp;
                   return ERROR_TOKEN; // 暂时不考虑逻辑非
-        case '\'':c = my_fgetc(fp);
-                  if(!is_letter(c)) {
-                      my_ungetc(c, fp);
-                      return ERROR_TOKEN;
+        case '\'':{
+                  int index = 0;
+                  token_text[index++] = c;
+                  c = my_fgetc(fp);
+                  if(is_letter(c) || is_num(c)) token_text[index++] = c;
+                  else if(c == '\\') {
+                    token_text[index++] = c;
+                    c = my_fgetc(fp);
+                    if(is_escape_character(c) && !is_octal_num(c = my_fgetc(fp))) { // 是转义字符（不包括数字表示形式）
+                        my_ungetc(c, fp);
+                        token_text[index++] = c;
+                    } else if (is_octal_num(c)) { // 八进制表示的转义字符
+                        do {
+                            token_text[index++] = c;
+                            c = my_fgetc(fp);
+                        } while(is_octal_num(c) && index <= 5);
+                        my_ungetc(c, fp);
+                        if(index > 5) {
+                            my_ungetc(c, fp);
+                            return ERROR_TOKEN;
+                        }
+                    } else if (c == 'x') { // 十六进制表示的转义字符
+                        token_text[index++] = c;
+                        while(index <= 5 && is_hexadecimal_num(c = my_fgetc(fp)))
+                            token_text[index++] = c;
+                        my_ungetc(c, fp);
+                        if(index > 5) {
+                            my_ungetc(c, fp);
+                            return ERROR_TOKEN;
+                        }
+                    } else {
+                        my_ungetc(c, fp);
+                        return ERROR_TOKEN;
+                    }
+                  } else {
+                    my_ungetc(c, fp);
+                    return ERROR_TOKEN;
                   }
-                  token_text[1] = c;
                   c = my_fgetc(fp);
                   if(c != '\'') {
-                      my_ungetc(c, fp);
-                      return ERROR_TOKEN;
+                    my_ungetc(c, fp);
+                    return ERROR_TOKEN;
                   }
-                  token_text[2] = c;
-                  token_text[3] = '\0';
+                  token_text[index++] = c;
+                  token_text[index] = '\0';
                   *fp_pointer = fp;
                   return CHAR_CONST;
+                }
         case '.': {
                     c = my_fgetc(fp); // 处理类似.124的情况
                     if(!is_num(c)) return ERROR_TOKEN;
@@ -388,6 +439,13 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                         return FILE_INCLUDE;
                     }
                     return ERROR_TOKEN;
+                  }
+        case '\"':{
+                    int index = 0;
+                    token_text[index++] = c;
+                    while((c = my_fgetc(fp)) != '\"') token_text[index++] = c;
+                    token_text[index++] = c;
+                    return STRING_CONST;
                   }
         default:  if(feof(fp)) return EOF;
                   return ERROR_TOKEN;
@@ -452,6 +510,7 @@ char* get_token_kind(int kind) {
         case DOUBLE:      return "DOUBLE";
         case CHAR:        return "CHAR";
         case LONG:        return "LONG";
+        case STRING:      return "STRING";
         case VOID:        return "VOID";
         case IF:          return "IF";
         case ELSE:        return "ELSE";
@@ -488,18 +547,8 @@ char* get_token_kind(int kind) {
         case FILE_NAME:   return "FIME_NAME";
         case LINE_COMMENT:return "LINE_COMMENT";
         case BLOCK_COMMENT:return "BLOCK_COMMENT";
-        default:  return "ERROR!";
+        default:          return "ERROR!";
     }
 }
 
-/**
- * 读取*fp_pointer所指向的源文件的下一个单词(不包括注释)
- * @param fp_pointer 指向源文件当前读取位置的双重指针
- * @return 识别出的单词的种类码
- */
-int get_token(FILE** fp_pointer) {
-    int kind = get_all_token(fp_pointer);
-    while(kind == LINE_COMMENT || kind == BLOCK_COMMENT) 
-        kind = get_all_token(fp_pointer);
-    return kind;
-}
+
