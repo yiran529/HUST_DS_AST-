@@ -1,3 +1,11 @@
+#define a 3223
+#include <iee>
+int _a_c;
+#define _a a
 string func(string hi) {
+    if(strlen("hi") == 2)
+    printf("hellp%d", hello);
     return "hello world";
+        printf("a=%d\a\b\f\n\t\v\\\?c=%d",a,c);
+             printf("%c%c",'\123','\x5f');
 }

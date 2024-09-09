@@ -32,6 +32,21 @@ bool is_type_specifier(int kind) { //判断是不是类型关键字
 }
 
 /**
+ * 判断一个种类编号是不是类型前缀（或者叫类型修饰符？）
+ * @param kind 将要进行判断的单词种类编号
+ * @return 如果是，则返回true；否则返回false
+ */
+bool is_type_prefix(int kind) { 
+    return kind == UNSIGNED||
+           kind == SIGNED  ||
+           kind == AUTO    ||
+           kind == CONST   ||
+           kind == STATIC  ||
+           kind == EXTERN  ||
+           kind == TYPEDEF ;
+}
+
+/**
  * 判断一个种类编号是不是常数
  * @param kind 将要进行判断的单词种类编号
  * @return 如果是，则返回true；否则返回false
@@ -142,6 +157,7 @@ void assign_AST_node(AST_NODE* &node, AST_NODE_TYPE type, TOKEN_KIND kind, char*
     node-> type = type;
     node-> word = (WORD_INFO*)malloc(sizeof(WORD_INFO));
     node-> word-> kind = kind;
+    node-> word-> type_prefix = NULL; // 默认没有
     node-> word-> data = (char*)malloc(sizeof(char) * (strlen(token_text0) + 1));
     strcpy(node-> word-> data, token_text0);
     node-> word-> array_info = NULL;
@@ -614,9 +630,19 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
         if(cur_kind == ERROR_TOKEN) strcpy(error_message, "Error token.");
         else strcpy(error_message, "Expected '}' here.");
         return false;
-    } else if(is_type_specifier(cur_kind)) { // 是局部变量定义
+    } 
+    if(is_type_prefix(cur_kind)) {
+        cur_kind = get_token(fp_pointer);
+        if(!is_type_specifier(cur_kind)) { // 保证类型修饰符后面紧跟类型
+            strcpy(error_message, "Expected type specifier here.");
+            return false;
+        }
+    }
+    if(is_type_specifier(cur_kind)) { // 是局部变量定义
         assign_AST_node(cur_node, LOCAL_VAR_DEF);
         assign_AST_node(cur_node-> first_child, WORD, (TOKEN_KIND)cur_kind, token_text);
+        if(is_type_prefix(last_kind)) 
+            assign_AST_node(cur_node-> first_child-> word-> type_prefix, WORD, (TOKEN_KIND)cur_kind, token_text_copy);
         cur_kind = get_token(fp_pointer);
         return build_var_list(cur_node-> first_child-> next_sibling, fp_pointer);
     } else if(cur_kind == IDENT || is_const(cur_kind) || cur_kind == LP || cur_kind == SEMI) { // 是表达式(可以只含一个分号)
@@ -793,16 +819,53 @@ bool build_ext_def(AST_NODE* &cur_node, FILE** fp_pointer) {
     assign_AST_node(cur_node, UNKNOWN);
 
     int type = cur_kind;
-    if(is_type_specifier(cur_kind) || cur_kind == VOID) // 特殊判断函数返回值为空的情况
+    if(is_type_prefix(cur_kind)) {
+        cur_kind = get_token(fp_pointer); 
+        if(!is_type_specifier(cur_kind)) { //保证类型修饰符后面紧跟类型符
+            strcpy(error_message, "Expected type specifier here.");
+            return false;
+        }
+    }
+    if(is_type_specifier(cur_kind) || cur_kind == VOID) {// 特殊判断函数返回值为空的情况
         assign_AST_node(cur_node-> first_child, WORD, (TOKEN_KIND)cur_kind, token_text);
-    else if(cur_kind == MACRO_DEFINE) {
-        cur_kind = get_token(fp_pointer);
-        if(cur_kind == IDENT) {
-            assign_AST_node(cur_node, MACRO_DEFINE_STATEMENT);
-            assign_AST_node(cur_node-> first_child, WORD, IDENT, token_text); 
+        if(is_type_prefix(last_kind)) 
+            assign_AST_node(cur_node-> first_child-> word-> type_prefix, WORD, (TOKEN_KIND)last_kind, token_text_copy);
+    } else if(cur_kind == MACRO_DEFINE) {
+        assign_AST_node(cur_node, MACRO_DEFINE_STATEMENT);
+        char c;
+
+        // 读取#define 后的第一个单词
+        while((c = my_fgetc(*fp_pointer)) == ' ');
+        if(c == '\n') {
+            strcpy(error_message, "Wrong format of macro definition.");
+            return false;
+        } else {
+            my_ungetc(c, *fp_pointer);
             cur_kind = get_token(fp_pointer);
-            return true;
-        } else return false;
+            if(cur_kind == IDENT) assign_AST_node(cur_node-> first_child, WORD, IDENT, token_text); 
+            else {  
+                strcpy(error_message, "Unexpected token here.");
+                return false;
+            }
+        } 
+
+        // 读取#define 后的第二个单词
+        while((c = my_fgetc(*fp_pointer)) == ' ');
+        if(c == '\n') {
+            strcpy(error_message, "Wrong format of macro definition.");
+            return false;
+        } else {
+            my_ungetc(c, *fp_pointer);
+            cur_kind = get_token(fp_pointer);
+            if(cur_kind == IDENT ) assign_AST_node(*get_child(cur_node, 2), WORD, IDENT, token_text); 
+            else if(is_const(cur_kind)) assign_AST_node(*get_child(cur_node, 2), WORD, (TOKEN_KIND)cur_kind, token_text);
+            else {  
+                strcpy(error_message, "Unexpected token here.");
+                return false;
+            }
+        } 
+        cur_kind = get_token(fp_pointer);
+        return true;
     } 
     else if(cur_kind == FILE_INCLUDE) {
         cur_kind = get_token(fp_pointer);
@@ -811,7 +874,10 @@ bool build_ext_def(AST_NODE* &cur_node, FILE** fp_pointer) {
             assign_AST_node(cur_node-> first_child, WORD, FILE_NAME, token_text); 
             cur_kind = get_token(fp_pointer);
             return true;
-        } else return false;
+        } else {
+            strcpy(error_message, "Wrong format of file-including");
+            return false;
+        }
     }
     else {
         strcpy(error_message, "Expected type specifier here.");

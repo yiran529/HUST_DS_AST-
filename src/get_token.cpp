@@ -83,7 +83,14 @@ TOKEN_KIND get_keyword(char* token_text) {
     if(!strcmp(token_text, "include"))  return INCLUDE;
     if(!strcmp(token_text, "struct"))   return STRUCT;
     if(!strcmp(token_text, "typedef"))  return TYPEDEF;
-    if(!strcmp(token_text, "string"))  return STRING;
+    if(!strcmp(token_text, "string"))   return STRING;
+    if(!strcmp(token_text, "unsigned")) return UNSIGNED;
+    if(!strcmp(token_text, "signed"))   return SIGNED;
+    if(!strcmp(token_text, "const"))    return CONST;
+    if(!strcmp(token_text, "extern"))   return EXTERN;
+    if(!strcmp(token_text, "auto"))     return AUTO;
+    if(!strcmp(token_text, "static"))   return STATIC;
+    if(!strcmp(token_text, "typedef"))  return TYPEDEF;
     return IDENT; 
     //TODO;//自身值怎么处理
 }
@@ -151,7 +158,7 @@ TOKEN_KIND process_number(char* token_text, int index, char c, FILE** fp_pointer
     if(c == '0') {
         token_text[index++] = c;
         c = my_fgetc(fp);
-        if(c == 'x') {
+        if(c == 'x' || c == 'X') {
             do {
                 token_text[index++] = c;
                 c = my_fgetc(fp);
@@ -443,8 +450,10 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
         case '\"':{
                     int index = 0;
                     token_text[index++] = c;
-                    while((c = my_fgetc(fp)) != '\"') token_text[index++] = c;
+                    while((c = my_fgetc(fp)) != '\"' && c != '\n') token_text[index++] = c;
+                    if(c=='\n') return ERROR_TOKEN;
                     token_text[index++] = c;
+                    token_text[index] = '\0';
                     return STRING_CONST;
                   }
         default:  if(feof(fp)) return EOF;
@@ -466,11 +475,11 @@ int get_all_token(FILE** fp_pointer) {
         if(c == '\n') row++, col = 0;
     } 
 
-    if(is_letter(c)) {
+    if(is_letter(c) || c == '_') {
         do {
             token_text[index++] = c;
             c = my_fgetc(fp);
-        } while(is_num(c) || is_letter(c));
+        } while(is_num(c) || is_letter(c) || c == '_');
         my_ungetc(c, fp);
         token_text[index] = '\0';
         *fp_pointer = fp;
@@ -547,6 +556,12 @@ char* get_token_kind(int kind) {
         case FILE_NAME:   return "FIME_NAME";
         case LINE_COMMENT:return "LINE_COMMENT";
         case BLOCK_COMMENT:return "BLOCK_COMMENT";
+        case UNSIGNED:    return "UNSIGNED";
+        case SIGNED:      return "SIGNED";
+        case EXTERN:      return "EXTERN";
+        case STATIC:      return "STATIC";
+        case AUTO:        return "AUTO";
+        case CONST:       return "CONST";
         default:          return "ERROR!";
     }
 }

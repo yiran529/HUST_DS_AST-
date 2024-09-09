@@ -35,7 +35,9 @@ enum AST_NODE_TYPE {
 typedef struct WORD_INFO{
     int kind;
     char* data;
+    struct AST_NODE* type_prefix; // 如果有，这里存放类型修饰符
     struct AST_NODE* array_info; // 如果该标识符是数组，这里将存储数组方括号内的内容
+
 }WORD_INFO;
 typedef struct AST_NODE{ // 采用孩子兄弟法存储多叉树
     AST_NODE_TYPE type;

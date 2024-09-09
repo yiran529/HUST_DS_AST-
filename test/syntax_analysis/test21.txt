@@ -1,0 +1,10 @@
+static int a;
+extern int  fun(int s) {
+    // const int a = 10;
+{
+    typedef int c;}
+    unsigned int c;
+    signed short l;
+    long aa__;
+    signed int;
+}

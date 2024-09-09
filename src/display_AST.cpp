@@ -8,6 +8,7 @@ void display_indent(int indent) {
     for(int i = 1; i <= indent; i++) printf("%s", one_indent);
 }
 
+
 void display_var_def(AST_NODE* cur_node, int indent);
 void display_expression_tree(AST_NODE* cur_node, int indent);
 
@@ -195,6 +196,8 @@ void display_formal_param_seq(AST_NODE* cur_node, int indent) {
 void display_func_def(AST_NODE* cur_node, int indent) {
     display_indent(indent);
     printf("type: ");
+    if(cur_node-> first_child-> word-> type_prefix) // 如果有类型修饰符
+        printf("%s ", cur_node-> first_child-> word-> type_prefix-> word-> data);
     display_type((TOKEN_KIND)cur_node-> first_child-> word-> kind);
     printf("\n");
 
@@ -229,6 +232,8 @@ void display_var_list(AST_NODE* cur_node, int indent) {
 void display_var_def(AST_NODE* cur_node, int indent) {
     display_indent(indent);
     printf("type: ");
+    if(cur_node-> first_child-> word-> type_prefix) // 如果有类型修饰符
+        printf("%s ", cur_node-> first_child-> word-> type_prefix-> word-> data);
     display_type((TOKEN_KIND)cur_node-> first_child-> word-> kind);
     printf("\n");
 
@@ -258,8 +263,13 @@ void display_AST(AST_NODE* cur_node, int indent) {
                           break;
         case MACRO_DEFINE_STATEMENT:
                           display_indent(indent);
-                          printf("Macro definition: ");
+                          printf("Macro definition: \n");
+                          display_indent(indent + 1);
+                          printf("macro name: ");
                           printf("%s\n", cur_node-> first_child-> word-> data);
+                          display_indent(indent + 1);
+                          printf("replacement text: ");
+                          printf("%s\n", (*(get_child(cur_node, 2)))-> word-> data);
                           break;
         case FILE_INCLUDE_STATEMENT:
                           display_indent(indent);

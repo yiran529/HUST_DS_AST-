@@ -71,7 +71,6 @@ void generate(AST_NODE* cur_node, FILE* fp, int indent) {
             if(paren_flag) fprintf(fp, ")");
         } 
         else {
-            fprintf(fp, "%s", cur_node-> word-> data);
             if(cur_node-> word-> array_info != NULL) { //不是单纯的标识符，而是数组
                 fprintf(fp, "[");
                 generate(cur_node-> word-> array_info, fp, 0);
@@ -127,6 +126,8 @@ void generate(AST_NODE* cur_node, FILE* fp, int indent) {
     }
     else if(cur_node-> type == EXT_VAR_DEF || cur_node-> type == LOCAL_VAR_DEF) {
         if(cur_node-> type == LOCAL_VAR_DEF) display_indent(indent, fp);
+        if((*get_child(cur_node, 1))-> word && (*get_child(cur_node, 1))-> word-> type_prefix) // 如果有类型修饰符
+            fprintf(fp, "%s ", (*get_child(cur_node, 1))-> word-> type_prefix-> word-> data);
         fprintf(fp, "%s", cur_node-> first_child-> word-> data);
         fprintf(fp, " ");
         generate(*get_child(cur_node, 2), fp, indent + 1);
@@ -141,6 +142,8 @@ void generate(AST_NODE* cur_node, FILE* fp, int indent) {
     }
     else if(cur_node-> type == FUNC_DEF) {
         display_indent(indent, fp);
+        if((*get_child(cur_node, 1))-> word && (*get_child(cur_node, 1))-> word-> type_prefix) // 如果有类型修饰符
+            fprintf(fp, "%s ", (*get_child(cur_node, 1))-> word-> type_prefix-> word-> data);
         fprintf(fp, "%s", cur_node-> first_child-> word-> data);
         fprintf(fp, " ");
         fprintf(fp, "%s", (*get_child(cur_node, 2))-> word-> data);
@@ -193,7 +196,8 @@ void generate(AST_NODE* cur_node, FILE* fp, int indent) {
         generate((*get_child(cur_node, 4)), fp, indent + 1);
     } else if(cur_node-> type == MACRO_DEFINE_STATEMENT) {
         fprintf(fp, "#define ");
-        fprintf(fp, "%s\n", cur_node-> first_child-> word-> data);
+        fprintf(fp, "%s ", cur_node-> first_child-> word-> data);
+        fprintf(fp, "%s\n", (*get_child(cur_node, 2))-> word-> data);
     } else if(cur_node-> type == FILE_INCLUDE_STATEMENT) {
         fprintf(fp, "#include ");
         fprintf(fp, "%s\n", cur_node-> first_child-> word-> data);
