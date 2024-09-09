@@ -29,6 +29,7 @@ enum AST_NODE_TYPE {
     MACRO_DEFINE_STATEMENT,
     FILE_INCLUDE_STATEMENT, // #include<...>
     DO_WHILE_LOOP,
+    SWITCH_CASE_STATEMENT,
     UNKNOWN // 未知类型（即没有确定）
 };
 

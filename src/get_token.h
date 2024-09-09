@@ -69,6 +69,10 @@ enum TOKEN_KIND{
     EXTERN,
     STATIC,
     AUTO,
+    SWITCH,
+    CASE,
+    DEFAULT,
+    COLON // 冒号
 };
 //还差两个注释符号
 

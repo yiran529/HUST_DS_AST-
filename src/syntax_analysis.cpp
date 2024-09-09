@@ -194,6 +194,17 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer);
 
 /***********************************************************************************************************/
 /**
+ * 以cur_node(引用指针类型)为根构建表示switch-case语句的AST。switch已被读取。如果语句正确，最后一个分号将被读取。
+ * @param cur_node AST根的指针的引用
+ * @param fp_pointer 文件当前读取位置的双重指针
+ * @return 语句没有错误，返回true；否则返回false
+ */
+bool build_switch_case_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
+    if((cur_kind = get_token(fp_pointer)) != LP) return false;
+
+}
+
+/**
  * 以cur_node(引用指针类型)为根构建表示实参序列的AST。左括号已经存储在token_text中。函数正确调用后，右括号会被读取。
  * cur_node的第一个孩子表示第一个实参（表达式），第二个孩子表示后面的实参序列。
  * @param cur_node AST根的指针的引用
@@ -299,6 +310,7 @@ bool build_for_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
     }
     return true;
 }
+
 
 /**
  * 以cur_node(引用指针类型)为根构建表示while循环的AST。while后的第一个单词（如果是正确的话，应当是左括号）已经存储在token_text中。
@@ -685,6 +697,8 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
         return build_compound_statement(cur_node, fp_pointer);
     } else if(cur_kind == DO) { 
         return build_do_while_loop(cur_node, fp_pointer);
+    } else if(cur_kind == SWITCH) {
+        return build_switch_case_statement(cur_node, fp_pointer);
     }
     strcpy(error_message, "Unexpected token here.");
     return false;

@@ -6,5 +6,16 @@ extern int  fun(int s) {
     unsigned int c;
     signed short l;
     long aa__;
+    switch(i)
+     {
+        case 1:
+          c=1;
+          break;
+        case 2:
+          c=2;
+    break;
+        default:
+          c=3;
+     }
     signed int;
 }

@@ -91,6 +91,9 @@ TOKEN_KIND get_keyword(char* token_text) {
     if(!strcmp(token_text, "auto"))     return AUTO;
     if(!strcmp(token_text, "static"))   return STATIC;
     if(!strcmp(token_text, "typedef"))  return TYPEDEF;
+    if(!strcmp(token_text, "switch"))   return SWITCH;
+    if(!strcmp(token_text, "case"))     return CASE;
+    if(!strcmp(token_text, "default"))  return DEFAULT;
     return IDENT; 
     //TODO;//自身值怎么处理
 }
@@ -456,6 +459,9 @@ int process_others(char c, char* token_text, FILE** fp_pointer) {
                     token_text[index] = '\0';
                     return STRING_CONST;
                   }
+        case ':': token_text[0] = c;
+                  token_text[1] = '\0';
+                  return COLON;
         default:  if(feof(fp)) return EOF;
                   return ERROR_TOKEN;
     }
@@ -562,6 +568,10 @@ char* get_token_kind(int kind) {
         case STATIC:      return "STATIC";
         case AUTO:        return "AUTO";
         case CONST:       return "CONST";
+        case SWITCH:      return "SWITCH";
+        case CASE:        return "CASE";
+        case COLON:       return "COLON";
+        case DEFAULT:     return "DEFAULT";
         default:          return "ERROR!";
     }
 }

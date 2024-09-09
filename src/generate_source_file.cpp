@@ -71,6 +71,7 @@ void generate(AST_NODE* cur_node, FILE* fp, int indent) {
             if(paren_flag) fprintf(fp, ")");
         } 
         else {
+            fprintf(fp, "%s", cur_node-> word-> data);
             if(cur_node-> word-> array_info != NULL) { //不是单纯的标识符，而是数组
                 fprintf(fp, "[");
                 generate(cur_node-> word-> array_info, fp, 0);
