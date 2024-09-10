@@ -63,6 +63,7 @@ enum TOKEN_KIND{
     LINE_COMMENT, // 单行注释
     BLOCK_COMMENT, // 多行注释
     COMMA_OR_RP, // 要么是逗号要么是右括号，用以处理函数调用中形参的问题
+    COMMA_OR_SEMI, // 要么是逗号要么是分号，用以变量定义的同时进行赋值的问题
     UNSIGNED,
     SIGNED,
     CONST,

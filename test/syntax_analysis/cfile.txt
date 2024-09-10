@@ -1,6 +1,9 @@
 static int a;
 extern int fun(int s)
 {
+    const int a=10;
+    extern char c=a;
+    string l="ESSs",e="LLLSJ23  ";
     {
         typedef int c;
     }

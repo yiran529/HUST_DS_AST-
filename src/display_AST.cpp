@@ -270,6 +270,11 @@ void display_var_list(AST_NODE* cur_node, int indent) {
     display_indent(indent);
     printf("ID:  ");
     printf("%s\n", cur_node-> first_child-> word-> data);
+    if(cur_node-> first_child-> word-> assign_content) {
+        display_indent(indent + 1);
+        printf("assign statement\n");
+        display_expression_tree(cur_node-> first_child-> word-> assign_content-> first_child, indent + 2);
+    }
     display_var_list(cur_node-> first_child-> next_sibling, indent);
 }
 

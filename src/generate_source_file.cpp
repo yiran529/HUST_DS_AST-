@@ -136,6 +136,10 @@ void generate(AST_NODE* cur_node, FILE* fp, int indent) {
     }
     else if(cur_node-> type == VAR_SEQ) {
         fprintf(fp, "%s", cur_node-> first_child-> word-> data);
+        if(cur_node-> first_child-> word-> assign_content){
+            fprintf(fp, "=");
+            generate(cur_node-> first_child-> word-> assign_content, fp, 0);
+        }
         if(*get_child(cur_node, 2)) {
             fprintf(fp, ",");
             generate(*get_child(cur_node, 2), fp, 0);

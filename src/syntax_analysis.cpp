@@ -551,9 +551,9 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
             return false;
         } else if(cur_kind == LP && last_kind == IDENT) { // 处理函数调用的情况
             if(build_function_call(opn[opn_index - 1], fp_pointer) == false) return false;
-        } else if(cur_kind == SEMI  && end_sym == SEMI)        break;
-          else if(cur_kind == RB    && end_sym == RB)          break;
-          else if(cur_kind == COMMA && end_sym == COMMA_OR_RP) break;
+        } else if(cur_kind == SEMI  && (end_sym == SEMI || end_sym == COMMA_OR_SEMI))        break;
+          else if(cur_kind == RB    && end_sym == RB)                                      break;
+          else if(cur_kind == COMMA && (end_sym == COMMA_OR_RP || end_sym == COMMA_OR_SEMI)) break;
           else if(cur_kind == IDENT || is_const(cur_kind)) {
             if(opn_index > 0 && !is_operator(last_kind)) {
                 strcpy(error_message, "An operand should follow an operator.");
@@ -662,7 +662,7 @@ bool build_expression(AST_NODE* &cur_node, FILE** fp_pointer, TOKEN_KIND end_sym
 /**
  * 以cur_node(引用指针类型)为根构建表示变量序列(在变量定义时出现)的AST。
  * 该定义序列的第一个标识符已经存储在token_text中。
- * 函数调用后，下一部分的第一个单词也会被读取。
+ * 函数正确调用后，下一部分的第一个单词也会被读取。
  * @param cur_node AST根的指针的引用
  * @param fp_pointer 文件当前读取位置的双重指针
  * @return 变量序列没有错误，返回true；否则返回false
@@ -694,7 +694,11 @@ bool build_var_list(AST_NODE* &cur_node, FILE** fp_pointer) {
             my_ungetc(c, *fp_pointer); //若是数组，标识符与[]之间不能有空格
             cur_kind = get_token(fp_pointer);
             if(cur_kind == ASSIGN) {
-                
+                cur_kind = get_token(fp_pointer);
+                if(build_expression(cur_node-> first_child-> word-> assign_content, fp_pointer, COMMA_OR_SEMI) == false) 
+                    return false;
+                un_get_token(fp_pointer); // 将逗号或分号放回去，以让后续变量的读取正确进行
+                cur_kind = IDENT; // 将标识符+赋值语句视简单地视为IDENT
             } else un_get_token(fp_pointer);
         } else {
             cur_kind = get_token(fp_pointer);
