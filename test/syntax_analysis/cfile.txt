@@ -1,12 +1,32 @@
-#define a 3223
-#include <iee>
-int _a_c;
-#define _a a
-string func(string hi)
+static int a;
+extern int fun(int s)
 {
-    if(strlen("hi")==2)
-        printf("hellp%d",hello);
-    return "hello world";
-    printf("a=%d\a\b\f\n\t\v\\\?c=%d",a,c);
-    printf("%c%c",'\123','\x5f');
+    {
+        typedef int c;
+    }
+    unsigned int c;
+    signed short l;
+    long aa__;
+    case(i){
+        case 1:
+            c=1;
+            break;
+        case 2:
+        {
+            c=2;
+            if((c*7)&&(0-1))
+                func(call(c));
+            else if(-0123l)
+                for(c=1;c>=1;c+1)
+                    c=(c+1);
+            else
+                return true;
+            break;
+        }
+        default:
+        {
+            return false;
+        }
+    }
+    signed int a;
 }

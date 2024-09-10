@@ -161,6 +161,7 @@ void assign_AST_node(AST_NODE* &node, AST_NODE_TYPE type, TOKEN_KIND kind, char*
     node-> word-> data = (char*)malloc(sizeof(char) * (strlen(token_text0) + 1));
     strcpy(node-> word-> data, token_text0);
     node-> word-> array_info = NULL;
+    node-> word-> assign_content = NULL;
     node-> first_child = node-> next_sibling = NULL;
 }
 
@@ -194,14 +195,105 @@ bool build_statement(AST_NODE* &cur_node, FILE** fp_pointer);
 
 /***********************************************************************************************************/
 /**
+ * 以cur_node(引用指针类型)为根构建表示default语句的AST。
+ * default已被读取。如果语句正确，下一部分第一个单词将被读取。
+ * 其中cur_node第一个孩子为语句序列或复合语句
+ * @param cur_node AST根的指针的引用
+ * @param fp_pointer 文件当前读取位置的双重指针
+ * @return 语句没有错误，返回true；否则返回false
+ */
+bool build_default_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
+    assign_AST_node(cur_node, DEFAULT_STATEMENT);
+    cur_kind = get_token(fp_pointer);
+    if(cur_kind != COLON) {
+        strcpy(error_message, "Expected ':' here");
+        return false;
+    }
+    cur_kind = get_token(fp_pointer);
+    if(cur_kind == LC) {
+        cur_kind = get_token(fp_pointer);
+        return build_compound_statement(cur_node-> first_child, fp_pointer);
+    } 
+    AST_NODE** p = &(cur_node-> first_child);
+    while(cur_kind != RC) {
+        assign_AST_node(*p, STATEMENT_SEQ);
+        if(build_statement((*p)-> first_child, fp_pointer) == false) return false;
+        p = get_child(*p, 2);
+    }
+    return true;
+}
+
+/**
+ * 以cur_node(引用指针类型)为根构建表示case语句的AST。case与后面的常数已被读取。
+ * 如果语句正确，下一部分第一个单词将被读取。
+ * 其中cur_node第一个孩子为case后的常数，第二个孩子为语句序列或复合语句
+ * @param cur_node AST根的指针的引用
+ * @param fp_pointer 文件当前读取位置的双重指针
+ * @return 语句没有错误，返回true；否则返回false
+ */
+bool build_case_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
+    assign_AST_node(cur_node, CASE_STATEMENT);
+    cur_kind = get_token(fp_pointer);
+    assign_AST_node(cur_node-> first_child, WORD, (TOKEN_KIND)cur_kind, token_text_copy);
+    if(cur_kind != COLON) {
+        strcpy(error_message, "Expected ':' here");
+        return false;
+    }
+    cur_kind = get_token(fp_pointer);
+    if(cur_kind == LC) {
+        cur_kind = get_token(fp_pointer);
+        return build_compound_statement(*get_child(cur_node, 2), fp_pointer);
+    } 
+    AST_NODE** p = get_child(cur_node, 2);
+    while(cur_kind != CASE && cur_kind != RC && cur_kind != DEFAULT) {
+        assign_AST_node(*p, STATEMENT_SEQ);
+        if(build_statement((*p)-> first_child, fp_pointer) == false) return false;
+        p = get_child(*p, 2);
+    }
+    return true;
+}
+
+/**
  * 以cur_node(引用指针类型)为根构建表示switch-case语句的AST。switch已被读取。如果语句正确，最后一个分号将被读取。
+ * cur_node的第一个孩子表示switch括号内的数，后面的孩子依次表示case语句或default语句
  * @param cur_node AST根的指针的引用
  * @param fp_pointer 文件当前读取位置的双重指针
  * @return 语句没有错误，返回true；否则返回false
  */
 bool build_switch_case_statement(AST_NODE* &cur_node, FILE** fp_pointer) {
+    assign_AST_node(cur_node, SWITCH_CASE_STATEMENT);
     if((cur_kind = get_token(fp_pointer)) != LP) return false;
-
+    cur_kind = get_token(fp_pointer);
+    if(build_expression(cur_node-> first_child, fp_pointer, RP) == false) return false;
+    if((cur_kind = get_token(fp_pointer)) != LC) return false;
+    int child_num = 1; // 记录当前孩子个数
+    cur_kind = get_token(fp_pointer);
+    while(1) {
+        if(cur_kind == CASE) {
+            if(!is_const(cur_kind = get_token(fp_pointer))) {
+                strcpy(error_message, "Expected const here.");
+                return false;
+            }
+            if(build_case_statement(*get_child(cur_node, ++child_num), fp_pointer) == false) return false;
+        } else if(cur_kind == DEFAULT) {
+            if(build_default_statement(*get_child(cur_node, ++child_num), fp_pointer) == false) return false;
+            if(cur_kind != RC) {
+                strcpy(error_message, "Expected '}' here.");
+                return false;
+            }
+        } else {
+            strcpy(error_message, "Unexpected token here.");
+            return false;
+        }
+        if(cur_kind == RC) {
+            if((cur_kind = get_token(fp_pointer)) != SEMI) {
+                strcpy(error_message, "Expected ';' here.");
+                return false;
+            }
+            cur_kind = get_token(fp_pointer);
+            return true;
+        }
+    }
 }
 
 /**
@@ -598,8 +690,13 @@ bool build_var_list(AST_NODE* &cur_node, FILE** fp_pointer) {
         assign_AST_node(cur_node-> first_child, WORD, IDENT, token_text);
 
         char c = my_fgetc(*fp_pointer);//特判数组问题
-        if(c != '[') my_ungetc(c, *fp_pointer); //若是数组，标识符与[]之间不能有空格
-        else {
+        if(c != '[') {
+            my_ungetc(c, *fp_pointer); //若是数组，标识符与[]之间不能有空格
+            cur_kind = get_token(fp_pointer);
+            if(cur_kind == ASSIGN) {
+                
+            } else un_get_token(fp_pointer);
+        } else {
             cur_kind = get_token(fp_pointer);
             if(cur_kind != INT_CONST) {
                 strcpy(error_message, "Expected const integer here.");

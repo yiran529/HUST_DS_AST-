@@ -8,9 +8,50 @@ void display_indent(int indent) {
     for(int i = 1; i <= indent; i++) printf("%s", one_indent);
 }
 
-
+void display_statement(AST_NODE* cur_node, int indent);
 void display_var_def(AST_NODE* cur_node, int indent);
 void display_expression_tree(AST_NODE* cur_node, int indent);
+
+void display_switch_case_statement(AST_NODE* cur_node, int indent) {
+    display_statement(cur_node-> first_child, indent + 1);
+    AST_NODE* p = *get_child(cur_node, 2);
+    while(p) {
+        display_indent(indent + 1);
+            if(p-> type == CASE_STATEMENT) {
+            printf("case statement\n");
+            display_indent(indent + 2);
+            printf("case %s\n", p-> first_child-> word-> data);
+            display_indent(indent + 2);
+            printf("sub-statement:\n");
+            if(*get_child(p, 2) == NULL) {
+                display_indent(indent + 3);
+                printf("none\n");
+            } else if((*get_child(p, 2))-> type == STATEMENT_SEQ)
+                display_statement_seq((*get_child(p, 2)), indent + 3);
+            else {
+                display_indent(indent + 3);
+                printf("compound statement: \n");
+                display_statement_seq((*get_child(p, 2)) -> first_child, indent + 4);
+            }
+        }
+        else  {
+            printf("default statement\n");
+            display_indent(indent + 2);
+            printf("sub-statement\n");
+            if(*get_child(p, 1) == NULL) {
+                display_indent(indent + 3);
+                printf("none\n");
+            } else if(p->first_child -> type == STATEMENT_SEQ)
+                display_statement_seq(*get_child(p, 1), indent + 3);
+            else {
+                display_indent(indent + 2);
+                printf("compound statement: \n");
+                display_statement_seq((*get_child(p, 1))-> first_child, indent + 4);
+            }
+        }
+        p = p-> next_sibling;
+    }
+}
 
 void display_for_loop(AST_NODE* &cur_node, int indent) {
     display_indent(indent);
@@ -158,6 +199,9 @@ void display_statement(AST_NODE* cur_node, int indent) {
                         printf("condition: \n");
                         display_statement(*get_child(cur_node, 2), indent + 2);
                         break;
+        case SWITCH_CASE_STATEMENT:
+                        printf("switch-case statement\n");
+                        display_switch_case_statement(cur_node, indent); 
     }
 }
 

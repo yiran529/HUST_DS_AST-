@@ -214,6 +214,25 @@ void generate(AST_NODE* cur_node, FILE* fp, int indent) {
         fprintf(fp, "while(");
         generate(*get_child(cur_node, 2), fp, 0);
         fprintf(fp, ");\n");
+    } else if(cur_node-> type == SWITCH_CASE_STATEMENT) {
+        display_indent(indent, fp);
+        fprintf(fp, "case(");
+        generate(cur_node-> first_child, fp, 0);
+        fprintf(fp, "){\n");
+        AST_NODE* p = *get_child(cur_node, 2);
+        while(p) {
+            display_indent(indent + 1, fp);
+            if(p-> type == CASE_STATEMENT) {
+                fprintf(fp, "case %s:\n", p-> first_child-> word-> data);
+                generate(*(get_child(p, 2)), fp, indent + 2);
+            } else {
+                fprintf(fp, "default:\n");
+                generate(p-> first_child, fp, indent + 2);
+            }
+            p = p-> next_sibling;
+        }
+        display_indent(indent, fp);
+        fprintf(fp, "}\n");
     }
 }// || cur_node-> type == FOR_LOOP || cur_node-> type == CONDITIONAL_STATEMENT
 

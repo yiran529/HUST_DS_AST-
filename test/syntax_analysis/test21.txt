@@ -11,11 +11,16 @@ extern int  fun(int s) {
         case 1:
           c=1;
           break;
-        case 2:
+        case 2:{
           c=2;
-    break;
-        default:
-          c=3;
-     }
-    signed int;
+          if(c *7&&0-1)func(call(c));
+          else if(-0123l) for(c= 1;c>=1;c+1)c=c+1;
+          else return true;
+          break;
+        }
+        default:{
+          return false;
+        }
+     };
+    signed int a;
 }
