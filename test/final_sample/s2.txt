@@ -16,13 +16,12 @@ int main()
      else
      printf("YES");
 
-    for(i=0;i<2;i++)
+    for(i=0;i<2;i=i+1)
       s[i]=i;
 printf("%s",s);
 
     do{
         c=i;
-        i--;
         if(a>1||c>=1&&c!=0)
          printf("%c%d%x%X%o%f",'a','a','a','a','a',g);
         else if(c<=0)
@@ -51,8 +50,6 @@ void swap(int a,int c)
 {
     int b;
     b=a; a=c;c=b;
-    goto STATUS;
-    STATUS:
     printf("a=%d\a\b\f\n\t\v\\\?c=%d",a,c);
              printf("%c%c",'\123','\x5f');
 }

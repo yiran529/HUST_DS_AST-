@@ -166,8 +166,19 @@ TOKEN_KIND process_number(char* token_text, int index, char c, FILE** fp_pointer
                 token_text[index++] = c;
                 c = my_fgetc(fp);
             } while(is_hexadecimal_num(c));
+            if(c == 'u' || c == 'U') {// 处理整型常量后面有u或U后缀的情况
+                token_text[index++] = c;
+                token_text[index] = '\0';
+                c = my_fgetc(fp);
+                if(c == 'l' || c == 'L') {// 处理整型常量u后面有l或L后缀的情况
+                    token_text[index++] = c;
+                    token_text[index] = '\0';
+                    return UNSIGNED_LONG_CONST;
+                } else my_ungetc(c, fp);
+                return UNSIGNED_INT_CONST;
+            }
             if(c == 'l' || c == 'L') {// 处理整型常量后面有l或L后缀的情况
-                token_text[index++] = 'c';
+                token_text[index++] = c;
                 token_text[index] = '\0';
                 return LONG_CONST;
             }
@@ -208,6 +219,17 @@ TOKEN_KIND process_number(char* token_text, int index, char c, FILE** fp_pointer
         c = my_fgetc(fp);
     } while(is_num(c));
 
+    if(c == 'u' || c == 'U') {// 处理整型常量后面有u或U后缀的情况
+        token_text[index++] = c;
+        token_text[index] = '\0';
+        c = my_fgetc(fp);
+        if(c == 'l' || c == 'L') {// 处理整型常量u后面有l或L后缀的情况
+            token_text[index++] = c;
+            token_text[index] = '\0';
+            return UNSIGNED_LONG_CONST;
+        } else my_ungetc(c, fp);
+        return UNSIGNED_INT_CONST;
+    }
     if(c == 'l' || c == 'L') {// 处理整型常量后面有l或L后缀的情况
         token_text[index++] = c;
         token_text[index] = '\0';
@@ -516,6 +538,8 @@ char* get_token_kind(int kind) {
         case CHAR_CONST:  return "CHAR_CONST"; 
         case LONG_CONST:  return "LONG_CONST"; 
         case STRING_CONST:return "STRING_CONST";
+        case UNSIGNED_INT_CONST: return "UNSIGNED_INT_CONST";
+        case UNSIGNED_LONG_CONST:return "UNSIGNED_LONG_CONST";
         case INCLUDE:     return "INCLUDE"; 
         case STRUCT:      return "STRUCT"; 
         case TYPEDEF:     return "TYPEDEF";

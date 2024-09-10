@@ -52,13 +52,14 @@ bool is_type_prefix(int kind) {
  * @return 如果是，则返回true；否则返回false
  */
 bool is_const(int kind) { //判断是不是类型关键字
-    return kind == INT_CONST   ||
-           // kind == SHORT_CONST || 鉴于short没有特定的后缀，我们不考虑这种情况
-           kind == LONG_CONST  ||
-           kind == CHAR_CONST  ||
-           kind == FLOAT_CONST ||
-           kind == DOUBLE_CONST||
-           kind == STRING_CONST;
+    return kind == INT_CONST         ||
+           kind == LONG_CONST        ||
+           kind == CHAR_CONST        ||
+           kind == FLOAT_CONST       ||
+           kind == DOUBLE_CONST      ||
+           kind == STRING_CONST      ||
+           kind == UNSIGNED_INT_CONST||
+           kind == UNSIGNED_LONG_CONST;
            //kind == STRING_CONST; 暂不考虑
 }
 
